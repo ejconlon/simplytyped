@@ -11,10 +11,10 @@ import           Data.Bifunctor       (Bifunctor (..))
 import           Data.Bitraversable   (Bitraversable (..))
 import           Data.Foldable        (toList)
 import           Data.Maybe           (fromMaybe)
+import           Data.Sequence        (Seq)
+import qualified Data.Sequence        as Seq
 import           Data.Set             (Set)
-import qualified Data.Set             as S
-import           Data.Vector          (Vector)
-import qualified Data.Vector          as V
+import qualified Data.Set             as Set
 import           GHC.Generics         (Generic)
 import           SimplyTyped.Prelude
 
@@ -170,7 +170,7 @@ binderScope' :: y -> Binder y n f a -> Scope y n f a
 binderScope' y = Scope y . ScopeA . unBinder
 
 scopeFreeVars :: (Foldable f, Ord a) => Scope y n f a -> Set a
-scopeFreeVars = S.fromList . toList
+scopeFreeVars = Set.fromList . toList
 
 -- scopeMapInfo :: Functor f => (n -> o) -> Scope n f a -> Scope o f a
 -- scopeMapInfo f s =
@@ -251,42 +251,42 @@ binderFreeVars = scopeFreeVars . binderBody
 -- Abstraction and instantiation
 
 -- TODO allow insertion of info on bind?
-subAbstract :: (Monoid y, Functor f, Eq a) => Int -> n -> Vector a -> Scope y n f a -> Binder y n f a
-subAbstract n x ks s = Binder (UnderBinder n x (scopeBindOpt 0 s ((boundVarScope <$>) . flip V.elemIndex ks)))
+subAbstract :: (Monoid y, Functor f, Eq a) => Int -> n -> Seq a -> Scope y n f a -> Binder y n f a
+subAbstract n x ks s = Binder (UnderBinder n x (scopeBindOpt 0 s ((boundVarScope <$>) . flip Seq.elemIndexL ks)))
 
 -- TODO combine info on sub?
-subInstantiate :: Functor f => Int -> Vector (Scope y n f a) -> Scope y n f a -> Scope y n f a
+subInstantiate :: Functor f => Int -> Seq (Scope y n f a) -> Scope y n f a -> Scope y n f a
 subInstantiate n vs s@(Scope y us) =
     case us of
-        ScopeB b -> fromMaybe s (vs V.!? (b - n))
+        ScopeB b -> fromMaybe s (vs Seq.!? (b - n))
         ScopeF _ -> s
         ScopeA (UnderBinder i x e) -> Scope y (ScopeA (UnderBinder i x (subInstantiate (n + i) (scopeShift i <$> vs) e)))
         ScopeE fe -> Scope y (ScopeE (subInstantiate n vs <$> fe))
 
-abstract :: (Monoid y, Functor f, Eq a) => n -> Vector a -> Scope y n f a -> Binder y n f a
-abstract x ks = let n = V.length ks in subAbstract n x ks . scopeShift n
+abstract :: (Monoid y, Functor f, Eq a) => n -> Seq a -> Scope y n f a -> Binder y n f a
+abstract x ks = let n = Seq.length ks in subAbstract n x ks . scopeShift n
 
-instantiate :: Functor f => Vector (Scope y n f a) -> Scope y n f a -> Scope y n f a
+instantiate :: Functor f => Seq (Scope y n f a) -> Scope y n f a -> Scope y n f a
 instantiate = subInstantiate 0
 
-rawApply :: (ThrowSub m, Applicative m, Functor f) => Vector (Scope y n f a) -> Int -> Scope y n f a -> m (Scope y n f a)
+rawApply :: (ThrowSub m, Applicative m, Functor f) => Seq (Scope y n f a) -> Int -> Scope y n f a -> m (Scope y n f a)
 rawApply vs i e =
-    let len = V.length vs
+    let len = Seq.length vs
     in if len == i
         then pure (scopeShift (-1) (instantiate vs e))
         else throwSub (ApplyError len i)
 
-apply :: (ThrowSub m, Applicative m, Functor f)  => Vector (Scope y n f a) -> Binder y n f a -> m (Scope y n f a)
+apply :: (ThrowSub m, Applicative m, Functor f)  => Seq (Scope y n f a) -> Binder y n f a -> m (Scope y n f a)
 apply vs (Binder (UnderBinder i _ e)) = rawApply vs i e
 
 abstract1 :: (Monoid y, Functor f, Eq a) => n -> a -> Scope y n f a -> Binder y n f a
-abstract1 n k = abstract n (V.singleton k)
+abstract1 n k = abstract n (Seq.singleton k)
 
 instantiate1 :: Functor f => Scope y n f a -> Scope y n f a -> Scope y n f a
-instantiate1 v = instantiate (V.singleton v)
+instantiate1 v = instantiate (Seq.singleton v)
 
 apply1 :: (ThrowSub m, Applicative m, Functor f) => Scope y n f a -> Binder y n f a -> m (Scope y n f a)
-apply1 v = apply (V.singleton v)
+apply1 v = apply (Seq.singleton v)
 
 -- ScopeFold
 

@@ -15,7 +15,6 @@ dependencies:
 - base >= 4.12 && < 5
 - mtl
 - containers
-- vector
 # - bytestring
 # - free
 # - hashable
@@ -25,6 +24,7 @@ dependencies:
 # - text
 # - transformers
 # - unordered-containers
+# - vector
 
 default-extensions:
   - ConstraintKinds
