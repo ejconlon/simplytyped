@@ -13,18 +13,18 @@ description: Please see the README on GitHub at <https://github.com/githubuser/s
 
 dependencies:
 - base >= 4.12 && < 5
+- mtl
+- containers
+- vector
 # - bytestring
-# - containers
 # - free
 # - hashable
 # - lens
-# - mtl
 # - rio
 # - template-haskell
 # - text
 # - transformers
 # - unordered-containers
-# - vector
 
 default-extensions:
   - ConstraintKinds
