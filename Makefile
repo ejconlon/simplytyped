@@ -31,7 +31,7 @@ format:
 
 .PHONY: lint
 lint:
-	stack exec hlint -- -i 'Parse error' -i 'Reduce duplication' src
+	stack exec hlint -- -i 'Parse error' -i 'Reduce duplication' -i 'Use newtype instead of data' src
 
 .PHONY: refactor
 refactor:
