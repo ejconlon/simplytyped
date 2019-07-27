@@ -7,10 +7,11 @@ module SimplyTyped.Dep where
 
 import Control.Newtype.Generics (Newtype)
 import qualified Data.Map as Map
+import SimplyTyped.Deriving.Sum
+import SimplyTyped.Deriving.Wrapper
 import SimplyTyped.Prelude
 import SimplyTyped.Sub
 import SimplyTyped.Tree
-import SimplyTyped.Wrapper
 
 type Identifier = Text
 
@@ -134,34 +135,16 @@ data Exp a =
     -- | ExpRefl (ReflExp a)
     -- | ExpEqTy (EqTy a)
     deriving (Generic, Eq, Show)
+    deriving (Treeable) via (SumWrapperTreeable (Exp a))
 
-instance Treeable a => Treeable (Exp a) where
-  refTree _ = "exp"
-  defineTree _ =
-    ChoiceDef
-      [ defineTree (Proxy :: Proxy UnitExp)
-      , defineTree (Proxy :: Proxy UnitTy)
-      , defineTree (Proxy :: Proxy (ProdExp a))
-      , defineTree (Proxy :: Proxy (ProdTy a))
-      ]
-  depsTree _ =
-    mergeDepTrees
-      [ depsTree (Proxy :: Proxy UnitExp)
-      , depsTree (Proxy :: Proxy UnitTy)
-      , depsTree (Proxy :: Proxy (ProdExp a))
-      , depsTree (Proxy :: Proxy (ProdTy a))
-      ]
-  parseTree _ t =
-    ExpUnit <$> parseTree (Proxy :: Proxy UnitExp) t <|>
-    ExpUnitTy <$> parseTree (Proxy :: Proxy UnitTy) t <|>
-    ExpProd <$> parseTree (Proxy :: Proxy (ProdExp a)) t <|>
-    ExpProdTy <$> parseTree (Proxy :: Proxy (ProdTy a)) t
-  renderTree t =
-    case t of
-      ExpUnit u -> renderTree u
-      ExpUnitTy u -> renderTree u
-      ExpProd u -> renderTree u
-      ExpProdTy u -> renderTree u
+instance Treeable a => SumWrapper (Exp a) where
+  sumRefTree _ = "exp"
+  sumTreeInjs _ =
+    [ TreeInj (Proxy :: Proxy UnitExp) (Inj ExpUnit (\case ExpUnit t -> Just t; _ -> Nothing))
+    , TreeInj (Proxy :: Proxy UnitTy) (Inj ExpUnitTy (\case ExpUnitTy t -> Just t; _ -> Nothing))
+    , TreeInj (Proxy :: Proxy (ProdExp a)) (Inj ExpProd (\case ExpProd t -> Just t; _ -> Nothing))
+    , TreeInj (Proxy :: Proxy (ProdTy a)) (Inj ExpProdTy (\case ExpProdTy t -> Just t; _ -> Nothing))
+    ]
 
 newtype ExpScope = ExpScope { unExpScope :: Scope (BindInfo ExpScope) Exp Identifier }
   deriving (Generic, Eq, Show)
