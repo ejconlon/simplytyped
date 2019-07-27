@@ -20,11 +20,11 @@ steps:
       remove_redundant: true
 
   - tabs:
-      spaces: 4
+      spaces: 2
 
   - trailing_whitespace: {}
 
-columns: 94
+columns: 120
 
 newline: native
 

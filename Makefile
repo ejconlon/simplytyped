@@ -19,7 +19,7 @@ test:
 
 .PHONY: deps
 deps:
-	stack install apply-refact hlint intero stylish-haskell ghcid
+	stack build apply-refact hlint hindent intero stylish-haskell ghcid
 
 .PHONY: watch
 watch:
@@ -35,4 +35,8 @@ lint:
 
 .PHONY: refactor
 refactor:
-	find . -path ./.stack-work -prune -o -name '*.hs' | xargs -t -L1 stack exec hlint -- --refactor --refactor-options -i
+	find . -path ./.stack-work -prune -o -name '*.hs' -exec bash -c "echo {} && stack exec hlint -- --refactor --refactor-options -i {} || true" \;
+
+.PHONY: indent
+indent:
+	find . -path ./.stack-work -prune -o -name '*.hs' -exec bash -c "echo {} && stack exec hindent {} || true" \;
