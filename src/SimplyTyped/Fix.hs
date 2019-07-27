@@ -1,4 +1,4 @@
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module SimplyTyped.Fix where

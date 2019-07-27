@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedLists      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module SimplyTyped.Sub where
@@ -119,12 +119,12 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
     parseTree p t = parseBound <|> parseFree <|> parseBinder <|> parseEmbed where
         parseBound =
             case t of
-                Branch [Leaf "bound", Leaf tb] -> parseNat tb >>= pure . boundVarScope
-                _ -> parseFail
+                Branch [Leaf "bound", Leaf tb] -> boundVarScope <$> parseNat tb
+                _                              -> parseFail
         parseFree =
             case t of
-                Branch [Leaf "free", Leaf ta] -> parseRead ta >>= pure . freeVarScope
-                _ -> parseFail
+                Branch [Leaf "free", Leaf ta] -> freeVarScope <$> parseRead ta
+                _                             -> parseFail
         parseBinder =
             case t of
                 Branch [Leaf "binder", Leaf ti, tx, te] -> do

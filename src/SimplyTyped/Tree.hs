@@ -1,15 +1,15 @@
 module SimplyTyped.Tree where
 
-import Data.Foldable (toList)
-import Data.Map (Map)
-import qualified Data.Map as Map
-import qualified Data.Sequence as Seq
-import qualified Data.Text as Text
-import SimplyTyped.Prelude
+import           Data.Foldable              (toList)
+import           Data.Map                   (Map)
+import qualified Data.Map                   as Map
+import qualified Data.Sequence              as Seq
+import qualified Data.Text                  as Text
+import           SimplyTyped.Prelude
 import qualified Text.Megaparsec            as MP
 import qualified Text.Megaparsec.Char       as MPC
 import qualified Text.Megaparsec.Char.Lexer as MPCL
-import Text.Read (readMaybe)
+import           Text.Read                  (readMaybe)
 
 newtype TreeParser a = TreeParser { unTreeParser :: Seq a }
   deriving (Functor, Applicative, Monad, Alternative)
@@ -61,7 +61,7 @@ data Tree =
     deriving (Generic, Eq, Show)
 
 showTree :: Tree -> Text
-showTree (Leaf l) = l
+showTree (Leaf l)    = l
 showTree (Branch ts) = "(" <> Text.intercalate " " (showTree <$> toList ts) <> ")"
 
 showTreeable :: Treeable a => a -> Text

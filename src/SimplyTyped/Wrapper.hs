@@ -1,13 +1,13 @@
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedLists      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module SimplyTyped.Wrapper where
 
 import Control.Newtype.Generics (Newtype (..))
-import SimplyTyped.Tree
 import SimplyTyped.Prelude
+import SimplyTyped.Tree
 
 class TreeWrapper a where
     wrapRefTree :: Proxy a -> TreeIdent
