@@ -14,8 +14,11 @@ description: Please see the README on GitHub at <https://github.com/githubuser/s
 dependencies:
 - base >= 4.12 && < 5
 - containers
+- exceptions
 - lens
+- megaparsec
 - mtl
+- newtype-generics
 - text
 # - bytestring
 # - free

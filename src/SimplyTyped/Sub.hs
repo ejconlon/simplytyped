@@ -1,4 +1,5 @@
--- {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module SimplyTyped.Sub where
@@ -15,8 +16,10 @@ import           Data.Sequence        (Seq)
 import qualified Data.Sequence        as Seq
 import           Data.Set             (Set)
 import qualified Data.Set             as Set
+import qualified Data.Text            as Text
 import           GHC.Generics         (Generic)
 import           SimplyTyped.Prelude
+import           SimplyTyped.Tree
 
 -- Sub
 
@@ -96,6 +99,52 @@ instance Traversable f => Traversable (Scope n f) where
 instance Functor f => Applicative (Scope n f) where
     pure = freeVarScope
     (<*>) = ap
+
+instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (Scope n f a) where
+    refTree _ = "scope"
+    defineTree _ =
+        let refN = refTree (Proxy :: Proxy n)
+            refE = refTree (Proxy :: Proxy (f (Scope n f a)))
+        in ChoiceDef
+            [ BranchDef (BranchFixed [LeafDef (LeafKeyword "bound"), LeafDef LeafNat])
+            , BranchDef (BranchFixed [LeafDef (LeafKeyword "free"), LeafDef LeafIdent])
+            , BranchDef (BranchFixed [LeafDef (LeafKeyword "binder"), LeafDef LeafNat, RefDef refN, RefDef "scope"])
+            , BranchDef (BranchFixed [LeafDef (LeafKeyword "embed"), RefDef refE])
+            ]
+    depsTree _ =
+        mergeDepTrees
+            [ selfDepsTree (Proxy :: Proxy n)
+            , selfDepsTree (Proxy :: Proxy (f (Scope n f a)))
+            ]
+    parseTree p t = parseBound <|> parseFree <|> parseBinder <|> parseEmbed where
+        parseBound =
+            case t of
+                Branch [Leaf "bound", Leaf tb] -> parseNat tb >>= pure . boundVarScope
+                _ -> parseFail
+        parseFree =
+            case t of
+                Branch [Leaf "free", Leaf ta] -> parseRead ta >>= pure . freeVarScope
+                _ -> parseFail
+        parseBinder =
+            case t of
+                Branch [Leaf "binder", Leaf ti, tx, te] -> do
+                    i <- parseNat ti
+                    x <- parseTree (Proxy :: Proxy n) tx
+                    e <- parseTree p te
+                    pure (Scope (ScopeA (UnderBinder i x e)))
+                _ -> parseFail
+        parseEmbed =
+            case t of
+                Branch [Leaf "embed", te] -> do
+                    e <- parseTree (Proxy :: Proxy (f (Scope n f a))) te
+                    pure (Scope (ScopeE e))
+                _ -> parseFail
+    renderTree (Scope us) =
+        case us of
+            ScopeB b                   -> Branch [Leaf "bound", Leaf (Text.pack (show b))]
+            ScopeF a                   -> Branch [Leaf "free", Leaf (Text.pack (show a))]
+            ScopeA (UnderBinder i x e) -> Branch [Leaf "binder", Leaf (Text.pack (show i)), renderTree x, renderTree e]
+            ScopeE fe                  -> Branch [Leaf "embed", renderTree fe]
 
 subScopeShift :: Functor f => Int -> Int -> Scope n f a -> Scope n f a
 subScopeShift c d s@(Scope us) =
