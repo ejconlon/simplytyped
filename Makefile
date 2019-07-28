@@ -40,3 +40,7 @@ refactor:
 .PHONY: indent
 indent:
 	find . -path ./.stack-work -prune -o -name '*.hs' -exec bash -c "echo {} && stack exec hindent {} || true" \;
+
+.PHONY: repl
+repl:
+	stack exec stack build && stack exec simplytyped-exe
