@@ -6,6 +6,7 @@ import Data.Foldable (asum)
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
+-- TODO use prisms
 data Inj a b =
   Inj
     { injTo :: b -> a

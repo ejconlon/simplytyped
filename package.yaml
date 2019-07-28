@@ -19,6 +19,7 @@ dependencies:
 - megaparsec
 - mtl
 - newtype-generics
+- template-haskell
 - text
 # - bytestring
 # - free
@@ -35,6 +36,8 @@ default-extensions:
   - DeriveFoldable
   - DeriveGeneric
   - DeriveTraversable
+  - DerivingStrategies
+  - DerivingVia
   - FlexibleContexts
   - FlexibleInstances
   - FunctionalDependencies
@@ -47,6 +50,7 @@ default-extensions:
   - NoImplicitPrelude
   - OverloadedStrings
   - Rank2Types
+  - StandaloneDeriving
   - TemplateHaskell
   - TupleSections
   - TypeApplications

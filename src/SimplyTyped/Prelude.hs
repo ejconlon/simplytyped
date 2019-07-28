@@ -14,6 +14,7 @@ module SimplyTyped.Prelude
   , Text
   , Typeable
   , Void
+  , (&)
   , ap
   ) where
 
@@ -23,6 +24,7 @@ import Control.Monad (ap)
 import Control.Monad.Catch (MonadCatch(..), MonadThrow(..))
 import Control.Monad.Catch.Pure (Catch)
 import Control.Monad.Reader (MonadReader(..), Reader, ReaderT(..))
+import Data.Function ((&))
 import Data.Proxy (Proxy(..))
 import Data.Sequence (Seq(..))
 import Data.Text (Text)
