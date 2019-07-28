@@ -9,11 +9,11 @@ import SimplyTyped.Parts
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
-data Exp a =
-      ExpUnit UnitExp
-    | ExpUnitTy UnitTy
-    | ExpProd (ProdExp a)
-    | ExpProdTy (ProdTy a)
+data FrontExp a =
+      FrontExpUnit UnitExp
+    | FrontExpUnitTy UnitTy
+    | FrontExpProd (ProdExp a)
+    | FrontExpProdTy (ProdTy a)
     -- | ExpPiTy (PiTy a)
     -- | ExpSigmaTy (SigmaTy a)
     -- | ExpRewrite (RewriteExp a)
@@ -21,15 +21,15 @@ data Exp a =
     -- | ExpEqTy (EqTy a)
     deriving (Generic, Eq, Show)
 
-$(makePrisms ''Exp)
+$(makePrisms ''FrontExp)
 
-deriving via (SumWrapperTreeable (Exp a)) instance Treeable a => Treeable (Exp a)
+deriving via (SumWrapperTreeable (FrontExp a)) instance Treeable a => Treeable (FrontExp a)
 
-instance Treeable a => SumWrapper (Exp a) where
-  sumRefTree _ = "exp"
+instance Treeable a => SumWrapper (FrontExp a) where
+  sumRefTree _ = "frontExp"
   sumTreeInjs _ =
-    [ TreeInj (Proxy :: Proxy UnitExp) (Inj ExpUnit (\case ExpUnit t -> Just t; _ -> Nothing))
-    , TreeInj (Proxy :: Proxy UnitTy) (Inj ExpUnitTy (\case ExpUnitTy t -> Just t; _ -> Nothing))
-    , TreeInj (Proxy :: Proxy (ProdExp a)) (Inj ExpProd (\case ExpProd t -> Just t; _ -> Nothing))
-    , TreeInj (Proxy :: Proxy (ProdTy a)) (Inj ExpProdTy (\case ExpProdTy t -> Just t; _ -> Nothing))
+    [ TreeInj (Proxy :: Proxy UnitExp) _FrontExpUnit
+    , TreeInj (Proxy :: Proxy UnitTy) _FrontExpUnitTy
+    , TreeInj (Proxy :: Proxy (ProdExp a)) _FrontExpProd
+    , TreeInj (Proxy :: Proxy (ProdTy a)) _FrontExpProdTy
     ]

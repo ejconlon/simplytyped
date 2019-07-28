@@ -2,19 +2,13 @@
 
 module SimplyTyped.Deriving.Sum where
 
+import Control.Lens (Prism', preview, review)
 import Data.Foldable (asum)
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
--- TODO use prisms
-data Inj a b =
-  Inj
-    { injTo :: b -> a
-    , injFrom :: a -> Maybe b
-    }
-
 data TreeInj a where
-  TreeInj :: Treeable b => Proxy b -> Inj a b -> TreeInj a
+  TreeInj :: Treeable b => Proxy b -> Prism' a b -> TreeInj a
 
 class SumWrapper a where
   sumRefTree :: Proxy a -> TreeIdent
@@ -30,8 +24,8 @@ instance SumWrapper a => Treeable (SumWrapperTreeable a) where
   defineTree _ = ChoiceDef ((\(TreeInj p _) -> defineTree p) <$> sumTreeInjs (Proxy :: Proxy a))
   depsTree _ = mergeDepTrees ((\(TreeInj p _) -> depsTree p) <$> sumTreeInjs (Proxy :: Proxy a))
   parseTree _ t =
-    SumWrapperTreeable <$> asum ((\(TreeInj p i) -> injTo i <$> parseTree p t) <$> sumTreeInjs (Proxy :: Proxy a))
+    SumWrapperTreeable <$> asum ((\(TreeInj p i) -> review i <$> parseTree p t) <$> sumTreeInjs (Proxy :: Proxy a))
   renderTree (SumWrapperTreeable t) = go (sumTreeInjs (Proxy :: Proxy a))
     where
       go Empty = error "unmatched sum branch"
-      go (TreeInj _ i :<| injs) = maybe (go injs) renderTree (injFrom i t)
+      go (TreeInj _ i :<| injs) = maybe (go injs) renderTree (preview i t)

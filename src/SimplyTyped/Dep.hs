@@ -73,10 +73,10 @@ deriving via (SumWrapperTreeable (Exp a)) instance Treeable a => Treeable (Exp a
 instance Treeable a => SumWrapper (Exp a) where
   sumRefTree _ = "exp"
   sumTreeInjs _ =
-    [ TreeInj (Proxy :: Proxy UnitExp) (Inj ExpUnit (\case ExpUnit t -> Just t; _ -> Nothing))
-    , TreeInj (Proxy :: Proxy UnitTy) (Inj ExpUnitTy (\case ExpUnitTy t -> Just t; _ -> Nothing))
-    , TreeInj (Proxy :: Proxy (ProdExp a)) (Inj ExpProd (\case ExpProd t -> Just t; _ -> Nothing))
-    , TreeInj (Proxy :: Proxy (ProdTy a)) (Inj ExpProdTy (\case ExpProdTy t -> Just t; _ -> Nothing))
+    [ TreeInj (Proxy :: Proxy UnitExp) _ExpUnit
+    , TreeInj (Proxy :: Proxy UnitTy) _ExpUnitTy
+    , TreeInj (Proxy :: Proxy (ProdExp a)) _ExpProd
+    , TreeInj (Proxy :: Proxy (ProdTy a)) _ExpProdTy
     ]
 
 newtype ExpScope = ExpScope { unExpScope :: Scope (BindInfo ExpScope) Exp Identifier }
