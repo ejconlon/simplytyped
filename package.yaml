@@ -15,10 +15,12 @@ dependencies:
 - base >= 4.12 && < 5
 - containers
 - exceptions
+- haskeline
 - lens
 - megaparsec
 - mtl
 - newtype-generics
+- pretty-simple
 - template-haskell
 - text
 # - bytestring

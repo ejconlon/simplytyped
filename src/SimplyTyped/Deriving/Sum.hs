@@ -7,12 +7,12 @@ import Data.Foldable (asum)
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
-data TreeInj a where
-  TreeInj :: Treeable b => Proxy b -> Prism' a b -> TreeInj a
+data Inj c a where
+  Inj :: c b => Proxy b -> Prism' a b -> Inj c a
 
 class SumWrapper a where
   sumRefTree :: Proxy a -> TreeIdent
-  sumTreeInjs :: Proxy a -> Seq (TreeInj a)
+  sumTreeInjs :: Proxy a -> Seq (Inj Treeable a)
 
 newtype SumWrapperTreeable a =
   SumWrapperTreeable
@@ -21,11 +21,11 @@ newtype SumWrapperTreeable a =
 
 instance SumWrapper a => Treeable (SumWrapperTreeable a) where
   refTree _ = sumRefTree (Proxy :: Proxy a)
-  defineTree _ = ChoiceDef ((\(TreeInj p _) -> defineTree p) <$> sumTreeInjs (Proxy :: Proxy a))
-  depsTree _ = mergeDepTrees ((\(TreeInj p _) -> depsTree p) <$> sumTreeInjs (Proxy :: Proxy a))
+  defineTree _ = ChoiceDef ((\(Inj p _) -> defineTree p) <$> sumTreeInjs (Proxy :: Proxy a))
+  depsTree _ = mergeDepTrees ((\(Inj p _) -> depsTree p) <$> sumTreeInjs (Proxy :: Proxy a))
   parseTree _ t =
-    SumWrapperTreeable <$> asum ((\(TreeInj p i) -> review i <$> parseTree p t) <$> sumTreeInjs (Proxy :: Proxy a))
+    SumWrapperTreeable <$> asum ((\(Inj p i) -> review i <$> parseTree p t) <$> sumTreeInjs (Proxy :: Proxy a))
   renderTree (SumWrapperTreeable t) = go (sumTreeInjs (Proxy :: Proxy a))
     where
       go Empty = error "unmatched sum branch"
-      go (TreeInj _ i :<| injs) = maybe (go injs) renderTree (preview i t)
+      go (Inj _ i :<| injs) = maybe (go injs) renderTree (preview i t)
