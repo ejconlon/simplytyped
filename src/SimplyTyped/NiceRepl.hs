@@ -5,7 +5,6 @@ module SimplyTyped.NiceRepl where
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception)
 import Control.Monad (forever, unless)
-import Control.Monad.Catch (catch, throwM)
 import Control.Monad.Fix (fix)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Strict (get, put)
@@ -17,7 +16,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import SimplyTyped.Cli (Cli, Command, ReplDirective(..), execCli, outputPartsLn, outputPretty, outputStrLn, repl)
+import SimplyTyped.Cli
+import SimplyTyped.Exceptions
 import SimplyTyped.Prelude
 
 data ReplExc
@@ -31,12 +31,9 @@ instance Exception ReplExc
 throwCommandError :: Cli s a
 throwCommandError = throwM CommandError
 
-printCatch :: Command s -> Command s
-printCatch command input =
-  catch (command input) $ \(e :: ReplExc) -> do
-    outputStrLn "REPL ERROR: "
-    outputPretty e
-    pure ReplContinue
+printCatchCommand :: Command s -> Command s
+printCatchCommand command input =
+  printCatch "Repl" ReplContinue (tyMatch (Proxy :: Proxy ReplExc)) (command input)
 
 assertEmpty :: Text -> Cli s ()
 assertEmpty input = unless (T.null input) (throwM ExpectedNoInputError)
@@ -111,7 +108,7 @@ niceRepl (ReplDef greeting initState addl exec) = do
       cmd = outerCommand options exec
   outputStrLn greeting
   outputStrLn "Enter `:quit` to exit or `:help` to see all commands."
-  repl "> " (printCatch cmd)
+  repl "> " (printCatchCommand cmd)
 
 runRepl :: Show s => ReplDef s -> IO ()
 runRepl rd = execCli (niceRepl rd) (rdInitState rd) $> ()

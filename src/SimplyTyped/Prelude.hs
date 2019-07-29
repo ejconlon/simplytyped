@@ -11,19 +11,22 @@ module SimplyTyped.Prelude
   , Reader
   , ReaderT(..)
   , Seq(..)
+  , SomeException(..)
   , Text
   , Typeable
   , Void
   , (&)
   , ap
+  , asum
   ) where
 
 import Control.Applicative (Alternative(..))
-import Control.Exception (Exception)
+import Control.Exception (Exception, SomeException(..))
 import Control.Monad (ap)
 import Control.Monad.Catch (MonadCatch(..), MonadThrow(..))
 import Control.Monad.Catch.Pure (Catch)
 import Control.Monad.Reader (MonadReader(..), Reader, ReaderT(..))
+import Data.Foldable (asum)
 import Data.Function ((&))
 import Data.Proxy (Proxy(..))
 import Data.Sequence (Seq(..))

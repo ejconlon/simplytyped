@@ -122,3 +122,16 @@ readTreeable t =
   case readTree t of
     Nothing -> Seq.empty
     Just tt -> unTreeParser (parseTree (Proxy :: Proxy a) tt)
+
+data NoParseError = NoParseError deriving (Eq, Show, Typeable)
+instance Exception NoParseError
+
+data AmbiguityError a = AmbiguityError { options :: Seq a } deriving (Eq, Show, Typeable)
+instance (Show a, Typeable a) => Exception (AmbiguityError a)
+
+easyReadTreeable :: (MonadThrow m, Treeable a, Show a, Typeable a) => Proxy a -> Text -> m a
+easyReadTreeable _ t =
+  case readTreeable t of
+    Empty -> throwM NoParseError
+    a :<| Empty -> pure a
+    as -> throwM (AmbiguityError as)

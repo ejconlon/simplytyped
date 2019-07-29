@@ -12,6 +12,7 @@ import Data.Functor (($>))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import SimplyTyped.Exceptions
 import SimplyTyped.Prelude
 import qualified System.Console.Haskeline as H
 import qualified System.Console.Haskeline.MonadException as HE
@@ -59,6 +60,16 @@ outputShow = liftIO . print
 
 outputPretty :: Show a => a -> Cli s ()
 outputPretty = pPrint
+
+printCatch :: Text -> a -> (TyProof -> Bool) -> Cli s a -> Cli s a
+printCatch header defaultVal epred action =
+  catchHandler action $ \exc -> do
+    if epred (someTyProof exc)
+      then Just $ do
+        outputPartsLn ["Caught error in ", header, ":"]
+        outputPretty exc
+        pure defaultVal
+      else Nothing
 
 runCli :: Cli s a -> s -> IO (a, s)
 runCli cli initState = do

@@ -44,7 +44,7 @@ instance TreeWrapper FrontFix where
   wrapConTree _ = "frontFix"
 
 newtype FrontFix = FrontFix { unFrontFix :: FrontExp (FrontFix) }
-    deriving (Generic, Eq, Show)
+    deriving (Generic, Typeable, Eq, Show)
     deriving (Treeable) via TreeWrapperTreeable FrontFix
 
 instance Newtype FrontFix

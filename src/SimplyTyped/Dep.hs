@@ -80,7 +80,7 @@ instance Treeable a => SumWrapper (Exp a) where
     ]
 
 newtype ExpScope = ExpScope { unExpScope :: Scope (BindInfo ExpScope) Exp Identifier }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Typeable, Eq, Show)
   deriving (Treeable) via TreeWrapperTreeable ExpScope
 
 instance Newtype ExpScope

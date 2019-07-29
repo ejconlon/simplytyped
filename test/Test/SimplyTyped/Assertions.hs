@@ -16,5 +16,11 @@ assertPredicate predicate preface left right = unless (predicate left right) (as
 assertNotEqual :: (Eq a, Show a, HasCallStack) => a -> a -> Assertion
 assertNotEqual = assertPredicate (/=) "Expected not equal"
 
+assertTrue :: HasCallStack => Bool -> Assertion
+assertTrue a = assertPredicate (==) "Expected True" a True
+
+assertFalse :: HasCallStack => Bool -> Assertion
+assertFalse a = assertPredicate (==) "Expected False" a False
+
 (@/=) :: (Eq a, Show a, HasCallStack) => a -> a -> Assertion
 (@/=) = assertNotEqual
