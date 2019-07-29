@@ -16,10 +16,7 @@ initReplState :: ReplState
 initReplState = ()
 
 safeTyProxies :: Seq TyProxy
-safeTyProxies =
-  [ TyProxy (Proxy :: Proxy NoParseError)
-  , TyProxy (Proxy :: Proxy (AmbiguityError FrontFix))
-  ]
+safeTyProxies = [TyProxy (Proxy :: Proxy NoParseError), TyProxy (Proxy :: Proxy (AmbiguityError FrontFix))]
 
 safely :: Cli ReplState ReplDirective -> Cli ReplState ReplDirective
 safely = printCatch "Main" ReplContinue (runTyProxies safeTyProxies)
@@ -28,11 +25,12 @@ optCommands :: OptionCommands ReplState
 optCommands = Map.empty
 
 execCommand :: Command ReplState
-execCommand t = safely $ do
-  a <- easyReadTreeable (Proxy :: Proxy FrontFix) t
-  outputStrLn "Parsed:"
-  outputPretty a
-  pure ReplContinue
+execCommand t =
+  safely $ do
+    a <- easyReadTreeable (Proxy :: Proxy FrontFix) t
+    outputStrLn "Parsed:"
+    outputPretty a
+    pure ReplContinue
 
 replDef :: ReplDef ReplState
 replDef =

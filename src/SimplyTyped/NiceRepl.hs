@@ -32,8 +32,7 @@ throwCommandError :: Cli s a
 throwCommandError = throwM CommandError
 
 printCatchCommand :: Command s -> Command s
-printCatchCommand command input =
-  printCatch "Repl" ReplContinue (tyMatch (Proxy :: Proxy ReplExc)) (command input)
+printCatchCommand command input = printCatch "Repl" ReplContinue (tyMatch (Proxy :: Proxy ReplExc)) (command input)
 
 assertEmpty :: Text -> Cli s ()
 assertEmpty input = unless (T.null input) (throwM ExpectedNoInputError)

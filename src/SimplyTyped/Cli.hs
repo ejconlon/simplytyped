@@ -63,12 +63,12 @@ outputPretty = pPrint
 
 printCatch :: Text -> a -> (TyProof -> Bool) -> Cli s a -> Cli s a
 printCatch header defaultVal epred action =
-  catchHandler action $ \exc -> do
+  catchHandler action $ \exc ->
     if epred (someTyProof exc)
       then Just $ do
-        outputPartsLn ["Caught error in ", header, ":"]
-        outputPretty exc
-        pure defaultVal
+             outputPartsLn ["Caught error in ", header, ":"]
+             outputPretty exc
+             pure defaultVal
       else Nothing
 
 runCli :: Cli s a -> s -> IO (a, s)

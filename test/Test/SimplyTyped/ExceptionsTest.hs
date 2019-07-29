@@ -7,10 +7,17 @@ import Test.SimplyTyped.Assertions
 import Test.Tasty
 import Test.Tasty.HUnit
 
-data FooError = FooError deriving (Eq, Show, Typeable)
+data FooError =
+  FooError
+  deriving (Eq, Show, Typeable)
+
 instance Exception FooError
 
-data BarError = BazError | QuuxError deriving (Eq, Show, Typeable)
+data BarError
+  = BazError
+  | QuuxError
+  deriving (Eq, Show, Typeable)
+
 instance Exception BarError
 
 fooProxy :: Proxy FooError
@@ -52,18 +59,18 @@ someFooProof = someTyProof someFooError
 test_proxies :: TestTree
 test_proxies =
   testCase "proxies" $ do
-    assertTrue  (tyMatch fooProxy fooProof)
+    assertTrue (tyMatch fooProxy fooProof)
     assertFalse (tyMatch barProxy fooProof)
     assertFalse (tyMatch fooProxy bazProof)
-    assertTrue  (tyMatch barProxy bazProof)
-    assertTrue  (runTyProxy fooTyProxy fooProof)
+    assertTrue (tyMatch barProxy bazProof)
+    assertTrue (runTyProxy fooTyProxy fooProof)
     assertFalse (runTyProxy barTyProxy fooProof)
     assertFalse (runTyProxy fooTyProxy bazProof)
-    assertTrue  (runTyProxy barTyProxy bazProof)
-    assertTrue  (runTyProxies tyProxies fooProof)
-    assertTrue  (runTyProxies tyProxies bazProof)
+    assertTrue (runTyProxy barTyProxy bazProof)
+    assertTrue (runTyProxies tyProxies fooProof)
+    assertTrue (runTyProxies tyProxies bazProof)
     assertFalse (runTyProxies [] fooProof)
-    assertTrue  (runTyProxies [fooTyProxy] fooProof)
+    assertTrue (runTyProxies [fooTyProxy] fooProof)
     assertFalse (runTyProxies [barTyProxy] fooProof)
 
 test_handlers :: TestTree
@@ -73,6 +80,4 @@ test_handlers =
     runTyHandler fooTyHandler bazProof @?= Nothing
 
 test_some :: TestTree
-test_some =
-  testCase "some exception" $ do
-    assertTrue (tyMatch fooProxy someFooProof)
+test_some = testCase "some exception" $ assertTrue (tyMatch fooProxy someFooProof)
