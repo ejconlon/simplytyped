@@ -40,9 +40,8 @@ instance Treeable a => Treeable (BindInfo a) where
   refTree _ = "bindInfo"
   defineTree _ = BranchDef (BranchFixed [RefDef (refTree (Proxy :: Proxy BindCon)), RefDef (refTree (Proxy :: Proxy a))])
   depsTree _ =
-    mergeDepTrees
-      [ selfDepsTree (Proxy :: Proxy BindCon)
-      , selfDepsTree (Proxy :: Proxy a)
+      [ TreeProof (Proxy :: Proxy BindCon)
+      , TreeProof (Proxy :: Proxy a)
       ]
   parseTree _ t =
     case t of

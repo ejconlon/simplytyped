@@ -2,7 +2,6 @@
 
 module SimplyTyped.Deriving.Enum where
 
-import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
@@ -23,7 +22,7 @@ enumValues _ = Seq.fromList (enumFrom minBound)
 instance (Enum a, Bounded a, EnumWrapper a) => Treeable (EnumWrapperTreeable a) where
   refTree _ = enumRefTree (Proxy :: Proxy a)
   defineTree _ = ChoiceDef (LeafDef . LeafKeyword . enumToValueKeyword <$> enumValues (Proxy :: Proxy a))
-  depsTree _ = Map.empty
+  depsTree _ = Seq.empty
   parseTree _ t =
     case t of
       Leaf n -> maybe parseFail (pure . EnumWrapperTreeable) (enumFromValueKeyword (Proxy :: Proxy a) n)

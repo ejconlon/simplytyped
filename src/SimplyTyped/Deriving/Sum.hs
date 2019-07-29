@@ -22,7 +22,7 @@ newtype SumWrapperTreeable a =
 instance SumWrapper a => Treeable (SumWrapperTreeable a) where
   refTree _ = sumRefTree (Proxy :: Proxy a)
   defineTree _ = ChoiceDef ((\(Inj p _) -> defineTree p) <$> sumTreeInjs (Proxy :: Proxy a))
-  depsTree _ = mergeDepTrees ((\(Inj p _) -> depsTree p) <$> sumTreeInjs (Proxy :: Proxy a))
+  depsTree _ = (\(Inj p _) -> TreeProof p) <$> sumTreeInjs (Proxy :: Proxy a)
   parseTree _ t =
     SumWrapperTreeable <$> asum ((\(Inj p i) -> review i <$> parseTree p t) <$> sumTreeInjs (Proxy :: Proxy a))
   renderTree (SumWrapperTreeable t) = go (sumTreeInjs (Proxy :: Proxy a))

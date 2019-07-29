@@ -3,6 +3,8 @@ module SimplyTyped.Tree where
 import Data.Foldable (toList)
 import Data.Map (Map)
 import qualified Data.Map as Map
+
+-- import qualified Data.Map.Merge.Lazy as Merge
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import SimplyTyped.Prelude
@@ -20,24 +22,62 @@ newtype TreeParser a =
 parseFail :: TreeParser a
 parseFail = TreeParser Seq.empty
 
-parseRead :: Read a => Text -> TreeParser a
-parseRead t = maybe parseFail pure (readMaybe (Text.unpack t))
+parseRead :: Read a => Atom -> TreeParser a
+parseRead (Atom t) = maybe parseFail pure (readMaybe (Text.unpack t))
 
-parseNat :: Text -> TreeParser Int
+parseNat :: Atom -> TreeParser Int
 parseNat = parseRead
 
-type TreeIdent = Text
+showAtom :: Show a => a -> Atom
+showAtom = Atom . Text.pack . show
+
+newtype TreeIdent =
+  TreeIdent
+    { unTreeIdent :: Text
+    }
+  deriving (Generic, Eq, Ord, Show, IsString)
+
+type DepState = Map TreeIdent TreeDef
+
+newtype DepCollector a =
+  DepCollector
+    { unDepCollector :: State DepState a
+    }
+  deriving (Functor, Applicative, Monad, MonadState DepState)
+
+crawlDep :: TreeProof -> DepCollector ()
+crawlDep (TreeProof p) = do
+  let n = refTree p
+  m <- get
+  if Map.member n m
+    then pure ()
+    else do
+      let d = defineTree p
+      modify (Map.insert n d)
+      let es = depsTree p
+      for_ es crawlDep
+
+runDepCollector :: DepCollector () -> Map TreeIdent TreeDef
+runDepCollector s = execState (unDepCollector s) Map.empty
+
+runCrawlDeps :: Treeable a => Proxy a -> Map TreeIdent TreeDef
+runCrawlDeps p = runDepCollector (for_ (depsTree p) crawlDep)
 
 class Treeable a where
   refTree :: Proxy a -> TreeIdent
   defineTree :: Proxy a -> TreeDef
-  depsTree :: Proxy a -> Map TreeIdent TreeDef
+  depsTree :: Proxy a -> Seq TreeProof
   parseTree :: Proxy a -> Tree -> TreeParser a
   renderTree :: a -> Tree
-  selfDepsTree :: Proxy a -> Map TreeIdent TreeDef
-  selfDepsTree p = Map.insert (refTree p) (defineTree p) (depsTree p)
 
-type Atom = Text
+data TreeProof where
+  TreeProof :: Treeable a => Proxy a -> TreeProof
+
+newtype Atom =
+  Atom
+    { unAtom :: Text
+    }
+  deriving (Generic, Eq, Ord, Show, IsString)
 
 data LeafMatcher
   = LeafIdent
@@ -55,7 +95,7 @@ data TreeDef
   = LeafDef LeafMatcher
   | BranchDef BranchMatcher
   | ChoiceDef (Seq TreeDef)
-  | FixDef TreeIdent TreeDef
+  | FixDef Atom TreeIdent
   | RefDef TreeIdent
   deriving (Generic, Eq, Show)
 
@@ -65,16 +105,27 @@ data Tree
   deriving (Generic, Eq, Show)
 
 showTree :: Tree -> Text
-showTree (Leaf l) = l
+showTree (Leaf (Atom l)) = l
 showTree (Branch ts) = "(" <> Text.intercalate " " (showTree <$> toList ts) <> ")"
 
 showTreeable :: Treeable a => a -> Text
 showTreeable = showTree . renderTree
 
--- TODO
-mergeDepTrees :: Seq (Map TreeIdent TreeDef) -> Map TreeIdent TreeDef
-mergeDepTrees = undefined
-
+-- mergeDepTrees :: Map TreeIdent TreeDef -> Map TreeIdent TreeDef -> Map TreeIdent TreeDef
+-- mergeDepTrees = merge where
+--   merge = Merge.merge Merge.preserveMissing Merge.preserveMissing (Merge.zipWithMatched match)
+--   match k x y =
+--     if x == y
+--       then x
+--       else error ("Dep mismatch " <> show k <> ": " <> show x <> " vs " <> show y)
+-- crawlDepTree :: TreeProof -> Map TreeIdent TreeDef -> Map TreeIdent TreeDef
+-- crawlDepTree (TreeProof p) m =
+--   let n = refTree p
+--   in if Map.member n m
+--     then m
+--     else mergeDepTrees m (selfDepsTree p)
+-- crawlAllDepTrees :: Seq TreeProof -> Map TreeIdent TreeDef
+-- crawlAllDepTrees = foldr crawlDepTree Map.empty
 data Anno =
   Anno
     { annoStart :: MP.SourcePos
@@ -103,7 +154,7 @@ nonDelimPred :: Char -> Bool
 nonDelimPred c = c /= '(' && c /= ')' && c /= ' ' && c /= '\t' && c /= '\n'
 
 atomParser :: TextParser Atom
-atomParser = lexeme (MP.try (MP.takeWhile1P Nothing nonDelimPred))
+atomParser = Atom <$> lexeme (MP.try (MP.takeWhile1P Nothing nonDelimPred))
 
 leafParser :: TextParser Tree
 leafParser = Leaf <$> atomParser

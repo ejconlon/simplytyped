@@ -16,7 +16,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import GHC.Generics (Generic)
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
@@ -120,7 +119,7 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
           , BranchDef (BranchFixed [LeafDef (LeafKeyword "binder"), LeafDef LeafNat, RefDef refN, RefDef "scope"])
           , BranchDef (BranchFixed [LeafDef (LeafKeyword "embed"), RefDef refE])
           ]
-  depsTree _ = mergeDepTrees [selfDepsTree (Proxy :: Proxy n), selfDepsTree (Proxy :: Proxy (f (Scope n f a)))]
+  depsTree _ = [TreeProof (Proxy :: Proxy n), TreeProof (Proxy :: Proxy (f (Scope n f a)))]
   parseTree p t = parseBound <|> parseFree <|> parseBinder <|> parseEmbed
     where
       parseBound =
@@ -147,9 +146,9 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
           _ -> parseFail
   renderTree (Scope us) =
     case us of
-      ScopeB b -> Branch [Leaf "bound", Leaf (Text.pack (show b))]
-      ScopeF a -> Branch [Leaf "free", Leaf (Text.pack (show a))]
-      ScopeA (UnderBinder i x e) -> Branch [Leaf "binder", Leaf (Text.pack (show i)), renderTree x, renderTree e]
+      ScopeB b -> Branch [Leaf "bound", Leaf (showAtom b)]
+      ScopeF a -> Branch [Leaf "free", Leaf (showAtom a)]
+      ScopeA (UnderBinder i x e) -> Branch [Leaf "binder", Leaf (showAtom i), renderTree x, renderTree e]
       ScopeE fe -> Branch [Leaf "embed", renderTree fe]
 
 subScopeShift :: Functor f => Int -> Int -> Scope n f a -> Scope n f a

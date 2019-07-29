@@ -3,7 +3,7 @@
 
 module SimplyTyped.Parts where
 
-import qualified Data.Map as Map
+import qualified Data.Sequence as Seq
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
@@ -16,7 +16,7 @@ data UnitExp =
 instance Treeable UnitExp where
   refTree _ = "unitExp"
   defineTree _ = LeafDef (LeafKeyword "unit")
-  depsTree _ = Map.empty
+  depsTree _ = Seq.empty
   parseTree _ t =
     case t of
       Leaf "unit" -> pure UnitExp
@@ -30,7 +30,7 @@ data UnitTy =
 instance Treeable UnitTy where
   refTree _ = "unitTy"
   defineTree _ = LeafDef (LeafKeyword "Unit")
-  depsTree _ = Map.empty
+  depsTree _ = Seq.empty
   parseTree _ t =
     case t of
       Leaf "Unit" -> pure UnitTy
@@ -46,7 +46,7 @@ instance Treeable a => Treeable (ProdExp a) where
   defineTree _ =
     let nestRef = refTree (Proxy :: Proxy a)
      in BranchDef (BranchFixed [LeafDef (LeafKeyword "prod"), RefDef nestRef, RefDef nestRef])
-  depsTree _ = selfDepsTree (Proxy :: Proxy a)
+  depsTree _ = Seq.empty
   parseTree _ t =
     case t of
       Branch [Leaf "prod", l, r] -> ProdExp <$> parseTree (Proxy :: Proxy a) l <*> parseTree (Proxy :: Proxy a) r
@@ -62,7 +62,7 @@ instance Treeable a => Treeable (ProdTy a) where
   defineTree _ =
     let nestRef = refTree (Proxy :: Proxy a)
      in BranchDef (BranchFixed [LeafDef (LeafKeyword "Prod"), RefDef nestRef, RefDef nestRef])
-  depsTree _ = selfDepsTree (Proxy :: Proxy a)
+  depsTree _ = Seq.empty
   parseTree _ t =
     case t of
       Branch [Leaf "Prod", l, r] -> ProdTy <$> parseTree (Proxy :: Proxy a) l <*> parseTree (Proxy :: Proxy a) r

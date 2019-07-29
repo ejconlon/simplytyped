@@ -21,8 +21,18 @@ safeTyProxies = [TyProxy (Proxy :: Proxy NoParseError), TyProxy (Proxy :: Proxy 
 safely :: Cli ReplState ReplDirective -> Cli ReplState ReplDirective
 safely = printCatch "Main" ReplContinue (runTyProxies safeTyProxies)
 
+grammarCommand :: Command s
+grammarCommand =
+  bareCommand $ do
+    outputStrLn "Grammar:"
+    let grammar = defineTree (Proxy :: Proxy FrontFix)
+    outputPretty grammar
+    let deps = runCrawlDeps (Proxy :: Proxy FrontFix)
+    outputPretty deps
+    pure ReplContinue
+
 optCommands :: OptionCommands ReplState
-optCommands = Map.empty
+optCommands = Map.fromList [("grammar", ("display expression grammar", grammarCommand))]
 
 execCommand :: Command ReplState
 execCommand t =

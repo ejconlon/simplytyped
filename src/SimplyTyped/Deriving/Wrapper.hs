@@ -22,16 +22,7 @@ instance (TreeWrapper a, Newtype a, Treeable (O a)) => Treeable (TreeWrapperTree
   defineTree _ =
     let nestRef = refTree (Proxy :: Proxy (O a))
         con = wrapConTree (Proxy :: Proxy a)
-     in BranchDef (BranchFixed [LeafDef (LeafKeyword con), RefDef nestRef])
-  depsTree _ = depsTree (Proxy :: Proxy (O a))
-  parseTree _ t =
-    let con = wrapConTree (Proxy :: Proxy a)
-     in case t of
-          Branch [Leaf atom, tt] ->
-            if atom == con
-              then TreeWrapperTreeable . pack <$> parseTree (Proxy :: Proxy (O a)) tt
-              else parseFail
-          _ -> parseFail
-  renderTree ta =
-    let con = wrapConTree (Proxy :: Proxy a)
-     in Branch [Leaf con, renderTree (unpack (unTreeWrapperTreeable ta))]
+     in FixDef con nestRef
+  depsTree _ = [TreeProof (Proxy :: Proxy (O a))]
+  parseTree _ t = TreeWrapperTreeable . pack <$> parseTree (Proxy :: Proxy (O a)) t
+  renderTree = renderTree . unpack . unTreeWrapperTreeable
