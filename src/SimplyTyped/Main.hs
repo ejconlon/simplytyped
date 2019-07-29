@@ -27,6 +27,7 @@ grammarCommand =
     outputStrLn "Grammar:"
     let grammar = defineTree (Proxy :: Proxy FrontFix)
     outputPretty grammar
+    outputStrLn "Deps:"
     let deps = runCrawlDeps (Proxy :: Proxy FrontFix)
     outputPretty deps
     pure ReplContinue
