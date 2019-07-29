@@ -58,9 +58,6 @@ data Exp a =
     | ExpUnitTy UnitTy
     | ExpProd (ProdExp a)
     | ExpProdTy (ProdTy a)
-    -- | ExpPiTy (PiTy a)
-    -- | ExpSigmaTy (SigmaTy a)
-    -- | ExpRewrite (RewriteExp a)
     -- | ExpRefl (ReflExp a)
     -- | ExpEqTy (EqTy a)
     deriving (Generic, Eq, Show)
@@ -87,19 +84,3 @@ instance Newtype ExpScope
 instance TreeWrapper ExpScope where
   wrapRefTree _ = "expScope"
   wrapConTree _ = "expScope"
-
-data OfTyJudge a = OfTyJudge a a deriving (Generic, Eq, Show)
-
-data IsTyJudge a = IsTyJudge a deriving (Generic, Eq, Show)
-
-data Judge a =
-      JudgeOfTy (OfTyJudge a)
-    | JudgeIsTy (IsTyJudge a)
-    deriving (Generic, Eq, Show)
-
--- data Term a =
---       TermExp (Exp a)
---     | TermJudge (Judge a)
---     deriving (Generic, Eq, Show)
-
--- newtype TermScope = TermScope (Scope (Bind TermScope) Term Identifier) deriving (Eq, Show)

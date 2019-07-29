@@ -11,19 +11,17 @@ import SimplyTyped.Parts
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
--- data PiTy a = PiTy a a deriving (Generic, Eq, Show)
--- data SigmaTy a = SigmaTy a a deriving (Generic, Eq, Show)
-
 data FrontExp a =
       FrontExpUnit UnitExp
     | FrontExpUnitTy UnitTy
     | FrontExpProd (ProdExp a)
     | FrontExpProdTy (ProdTy a)
-    -- | ExpPiTy (PiTy a)
-    -- | ExpSigmaTy (SigmaTy a)
-    -- | ExpRewrite (RewriteExp a)
-    -- | ExpRefl (ReflExp a)
-    -- | ExpEqTy (EqTy a)
+    | FrontExpPi (PiExp a)
+    | FrontExpPiTy (PiTy a)
+    -- | FrontExpSigma (SigmaExp a)
+    -- | FrontExpSigmaTy (SigmaTy a)
+    -- | FrontExpRefl (ReflExp a)
+    -- | FrontExpEqTy (EqTy a)
     deriving (Generic, Eq, Show)
 
 $(makePrisms ''FrontExp)
@@ -37,6 +35,8 @@ instance Treeable a => SumWrapper (FrontExp a) where
     , Inj (Proxy :: Proxy UnitTy) _FrontExpUnitTy
     , Inj (Proxy :: Proxy (ProdExp a)) _FrontExpProd
     , Inj (Proxy :: Proxy (ProdTy a)) _FrontExpProdTy
+    , Inj (Proxy :: Proxy (PiExp a)) _FrontExpPi
+    , Inj (Proxy :: Proxy (PiTy a)) _FrontExpPiTy
     ]
 
 instance TreeWrapper FrontFix where
