@@ -54,11 +54,11 @@ instance Treeable a => Treeable (BindInfo a) where
     Branch [renderTree x, renderTree y]
 
 data Exp a =
-      ExpUnit UnitExp
+      ExpUnitTm UnitTm
     | ExpUnitTy UnitTy
-    | ExpProd (ProdExp a)
+    | ExpProdTm (ProdTm a)
     | ExpProdTy (ProdTy a)
-    -- | ExpRefl (ReflExp a)
+    -- | ExpReflTm (ReflTm a)
     -- | ExpEqTy (EqTy a)
     deriving (Generic, Eq, Show)
 
@@ -69,9 +69,9 @@ deriving via (SumWrapperTreeable (Exp a)) instance Treeable a => Treeable (Exp a
 instance Treeable a => SumWrapper (Exp a) where
   sumRefTree _ = "exp"
   sumTreeInjs _ =
-    [ Inj (Proxy :: Proxy UnitExp) _ExpUnit
+    [ Inj (Proxy :: Proxy UnitTm) _ExpUnitTm
     , Inj (Proxy :: Proxy UnitTy) _ExpUnitTy
-    , Inj (Proxy :: Proxy (ProdExp a)) _ExpProd
+    , Inj (Proxy :: Proxy (ProdTm a)) _ExpProdTm
     , Inj (Proxy :: Proxy (ProdTy a)) _ExpProdTy
     ]
 

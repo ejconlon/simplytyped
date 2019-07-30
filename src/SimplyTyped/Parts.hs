@@ -23,17 +23,17 @@ instance Treeable Identifier where
       _ -> empty
   renderTree (Identifier i) = Leaf (Atom i)
 
-data UnitExp =
-  UnitExp
+data UnitTm =
+  UnitTm
   deriving (Generic, Eq, Show)
 
-instance Treeable UnitExp where
-  refTree _ = "unitExp"
+instance Treeable UnitTm where
+  refTree _ = "unitTm"
   defineTree _ = LeafDef (LeafKeyword "unit")
   depsTree _ = Seq.empty
   parseTree _ t =
     case t of
-      Leaf "unit" -> pure UnitExp
+      Leaf "unit" -> pure UnitTm
       _ -> empty
   renderTree _ = Leaf "unit"
 
@@ -51,21 +51,21 @@ instance Treeable UnitTy where
       _ -> empty
   renderTree _ = Leaf "Unit"
 
-data ProdExp a =
-  ProdExp a a
+data ProdTm a =
+  ProdTm a a
   deriving (Generic, Eq, Show)
 
-instance Treeable a => Treeable (ProdExp a) where
-  refTree _ = "prodExp"
+instance Treeable a => Treeable (ProdTm a) where
+  refTree _ = "prodTm"
   defineTree _ =
     let nestRef = refTree (Proxy :: Proxy a)
      in BranchDef (BranchFixed [LeafDef (LeafKeyword "prod"), RefDef nestRef, RefDef nestRef])
   depsTree _ = [TreeProof (Proxy :: Proxy a)]
   parseTree _ t =
     case t of
-      Branch [Leaf "prod", l, r] -> ProdExp <$> parseTree (Proxy :: Proxy a) l <*> parseTree (Proxy :: Proxy a) r
+      Branch [Leaf "prod", l, r] -> ProdTm <$> parseTree (Proxy :: Proxy a) l <*> parseTree (Proxy :: Proxy a) r
       _ -> empty
-  renderTree (ProdExp l r) = Branch [Leaf "prod", renderTree l, renderTree r]
+  renderTree (ProdTm l r) = Branch [Leaf "prod", renderTree l, renderTree r]
 
 data ProdTy a =
   ProdTy a a
@@ -83,12 +83,12 @@ instance Treeable a => Treeable (ProdTy a) where
       _ -> empty
   renderTree (ProdTy l r) = Branch [Leaf "Prod", renderTree l, renderTree r]
 
-data PiExp a =
-  PiExp Identifier a a
+data PiTm a =
+  PiTm Identifier a a
   deriving (Generic, Eq, Show)
 
-instance Treeable a => Treeable (PiExp a) where
-  refTree _ = "piExp"
+instance Treeable a => Treeable (PiTm a) where
+  refTree _ = "piTm"
   defineTree _ =
     let identRef = refTree (Proxy :: Proxy Identifier)
         nestRef = refTree (Proxy :: Proxy a)
@@ -97,10 +97,10 @@ instance Treeable a => Treeable (PiExp a) where
   parseTree _ t =
     case t of
       Branch [Leaf "pi", i, l, r] ->
-        PiExp <$> parseTree (Proxy :: Proxy Identifier) i <*> parseTree (Proxy :: Proxy a) l <*>
+        PiTm <$> parseTree (Proxy :: Proxy Identifier) i <*> parseTree (Proxy :: Proxy a) l <*>
         parseTree (Proxy :: Proxy a) r
       _ -> empty
-  renderTree (PiExp i l r) = Branch [Leaf "pi", renderTree i, renderTree l, renderTree r]
+  renderTree (PiTm i l r) = Branch [Leaf "pi", renderTree i, renderTree l, renderTree r]
 
 data PiTy a =
   PiTy Identifier a a
@@ -120,6 +120,7 @@ instance Treeable a => Treeable (PiTy a) where
         parseTree (Proxy :: Proxy a) r
       _ -> empty
   renderTree (PiTy i l r) = Branch [Leaf "Pi", renderTree i, renderTree l, renderTree r]
+
 -- data SigmaExp a = SigmaExp a a deriving (Generic, Eq, Show)
 -- data SigmaTy a = SigmaTy a a deriving (Generic, Eq, Show)
 -- data ReflExp a = ReflExp a deriving (Generic, Eq, Show)

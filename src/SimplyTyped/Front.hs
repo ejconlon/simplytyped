@@ -12,15 +12,15 @@ import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
 data FrontExp a =
-      FrontExpUnit UnitExp
+      FrontExpUnitTm UnitTm
     | FrontExpUnitTy UnitTy
-    | FrontExpProd (ProdExp a)
+    | FrontExpProdTm (ProdTm a)
     | FrontExpProdTy (ProdTy a)
-    | FrontExpPi (PiExp a)
+    | FrontExpPiTm (PiTm a)
     | FrontExpPiTy (PiTy a)
-    -- | FrontExpSigma (SigmaExp a)
+    -- | FrontExpSigmaTm (SigmaTm a)
     -- | FrontExpSigmaTy (SigmaTy a)
-    -- | FrontExpRefl (ReflExp a)
+    -- | FrontExpReflTm (ReflTm a)
     -- | FrontExpEqTy (EqTy a)
     deriving (Generic, Eq, Show)
 
@@ -31,11 +31,11 @@ deriving via (SumWrapperTreeable (FrontExp a)) instance Treeable a => Treeable (
 instance Treeable a => SumWrapper (FrontExp a) where
   sumRefTree _ = "frontExp"
   sumTreeInjs _ =
-    [ Inj (Proxy :: Proxy UnitExp) _FrontExpUnit
+    [ Inj (Proxy :: Proxy UnitTm) _FrontExpUnitTm
     , Inj (Proxy :: Proxy UnitTy) _FrontExpUnitTy
-    , Inj (Proxy :: Proxy (ProdExp a)) _FrontExpProd
+    , Inj (Proxy :: Proxy (ProdTm a)) _FrontExpProdTm
     , Inj (Proxy :: Proxy (ProdTy a)) _FrontExpProdTy
-    , Inj (Proxy :: Proxy (PiExp a)) _FrontExpPi
+    , Inj (Proxy :: Proxy (PiTm a)) _FrontExpPiTm
     , Inj (Proxy :: Proxy (PiTy a)) _FrontExpPiTy
     ]
 
