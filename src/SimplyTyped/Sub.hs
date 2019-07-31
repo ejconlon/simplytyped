@@ -209,6 +209,28 @@ binderScope = Scope . ScopeA . unBinder
 scopeFreeVars :: (Foldable f, Ord a) => Scope n f a -> Set a
 scopeFreeVars = Set.fromList . toList
 
+class (Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) =>
+      Scoped h
+  where
+  type ScopedInfo h :: *
+  type ScopedFunctor h :: * -> *
+  type ScopedIdentifier h :: *
+  boundVarScoped :: Int -> h
+  freeVarScoped :: ScopedIdentifier h -> h
+  wrapScoped :: ScopedFunctor h h -> h
+  abstractScoped :: ScopedInfo h -> Seq (ScopedIdentifier h) -> h -> h
+  instantiateScoped :: Seq h -> h -> h
+
+instance (Functor f, Eq a) => Scoped (Scope n f a) where
+  type ScopedInfo (Scope n f a) = n
+  type ScopedFunctor (Scope n f a) = f
+  type ScopedIdentifier (Scope n f a) = a
+  boundVarScoped = boundVarScope
+  freeVarScoped = freeVarScope
+  wrapScoped = wrapScope
+  abstractScoped n is b = binderScope (abstract n is b)
+  instantiateScoped = instantiate
+
 -- TODO PRISMS!!!
 matchFunctor :: Scope n f a -> Maybe (f (Scope n f a))
 matchFunctor (Scope (ScopeE fe)) = pure fe
@@ -274,7 +296,6 @@ transformBinder t (Binder (UnderBinder i x b)) = Binder (UnderBinder i x (transf
 subAbstract :: (Functor f, Eq a) => Int -> n -> Seq a -> Scope n f a -> Binder n f a
 subAbstract n x ks s = Binder (UnderBinder n x (scopeBindOpt 0 s ((boundVarScope <$>) . flip Seq.elemIndexL ks)))
 
--- TODO combine info on sub?
 subInstantiate :: Functor f => Int -> Seq (Scope n f a) -> Scope n f a -> Scope n f a
 subInstantiate n vs s@(Scope us) =
   case us of

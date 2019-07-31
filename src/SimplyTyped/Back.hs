@@ -97,3 +97,14 @@ instance Newtype ExpScope
 instance TreeWrapper ExpScope where
   wrapRefTree _ = "expScope"
   wrapConTree _ = "expScope"
+
+instance Scoped ExpScope where
+  type ScopedInfo ExpScope = BindInfo ExpScope
+  type ScopedFunctor ExpScope = Exp
+  type ScopedIdentifier ExpScope = Identifier
+
+  boundVarScoped = ExpScope . boundVarScoped
+  freeVarScoped = ExpScope . freeVarScoped
+  wrapScoped = ExpScope . wrapScoped . fmap unExpScope
+  abstractScoped n is = ExpScope . abstractScoped n is . unExpScope
+  instantiateScoped vs = ExpScope . instantiateScoped (fmap unExpScope vs) . unExpScope
