@@ -3,7 +3,9 @@
 module SimplyTyped.Main where
 
 import qualified Data.Map.Strict as Map
+import SimplyTyped.Back
 import SimplyTyped.Cli
+import SimplyTyped.Convert
 import SimplyTyped.Exceptions
 import SimplyTyped.Front
 import SimplyTyped.NiceRepl
@@ -21,19 +23,26 @@ safeTyProxies = [TyProxy (Proxy :: Proxy NoParseError), TyProxy (Proxy :: Proxy 
 safely :: Cli ReplState ReplDirective -> Cli ReplState ReplDirective
 safely = printCatch "Main" ReplContinue (runTyProxies safeTyProxies)
 
-grammarCommand :: Command s
-grammarCommand =
+printGrammarFor :: Treeable a => Proxy a -> Command s
+printGrammarFor p =
   bareCommand $ do
+    outputStrLn "Ref:"
+    let ref = refTree p
+    outputPretty ref
     outputStrLn "Grammar:"
-    let grammar = defineTree (Proxy :: Proxy FrontFix)
+    let grammar = defineTree p
     outputPretty grammar
     outputStrLn "Deps:"
-    let deps = runCrawlDeps (Proxy :: Proxy FrontFix)
+    let deps = runCrawlDeps p
     outputPretty deps
     pure ReplContinue
 
 optCommands :: OptionCommands ReplState
-optCommands = Map.fromList [("grammar", ("display expression grammar", grammarCommand))]
+optCommands =
+  Map.fromList
+    [ ("frontgrammar", ("display frontend expression grammar", printGrammarFor (Proxy :: Proxy FrontFix)))
+    , ("backgrammar", ("display backend expression grammar", printGrammarFor (Proxy :: Proxy ExpScope)))
+    ]
 
 execCommand :: Command ReplState
 execCommand t =
@@ -41,6 +50,9 @@ execCommand t =
     a <- easyReadTreeable (Proxy :: Proxy FrontFix) t
     outputStrLn "Parsed:"
     outputPretty a
+    outputStrLn "Converted:"
+    let c = convert a
+    outputPretty c
     pure ReplContinue
 
 replDef :: ReplDef ReplState

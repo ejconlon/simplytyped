@@ -23,6 +23,22 @@ instance Treeable Identifier where
       _ -> empty
   renderTree (Identifier i) = Leaf (Atom i)
 
+data VarTm =
+  VarTm Identifier
+  deriving (Generic, Eq, Show)
+
+instance Treeable VarTm where
+  refTree _ = "varTm"
+  defineTree _ =
+    let p = refTree (Proxy :: Proxy Identifier)
+     in BranchDef (BranchFixed [LeafDef (LeafKeyword "var"), RefDef p])
+  depsTree _ = [TreeProof (Proxy :: Proxy Identifier)]
+  parseTree _ t =
+    case t of
+      Branch [Leaf "var", i] -> VarTm <$> parseTree (Proxy :: Proxy Identifier) i
+      _ -> empty
+  renderTree (VarTm i) = Branch [Leaf "var", renderTree i]
+
 data UnitTm =
   UnitTm
   deriving (Generic, Eq, Show)
@@ -53,7 +69,7 @@ instance Treeable UnitTy where
 
 data ProdTm a =
   ProdTm a a
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
 instance Treeable a => Treeable (ProdTm a) where
   refTree _ = "prodTm"
@@ -69,7 +85,7 @@ instance Treeable a => Treeable (ProdTm a) where
 
 data ProdTy a =
   ProdTy a a
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
 instance Treeable a => Treeable (ProdTy a) where
   refTree _ = "prodTy"
@@ -83,28 +99,28 @@ instance Treeable a => Treeable (ProdTy a) where
       _ -> empty
   renderTree (ProdTy l r) = Branch [Leaf "Prod", renderTree l, renderTree r]
 
-data PiTm a =
-  PiTm Identifier a a
-  deriving (Generic, Eq, Show)
+data LamTm a =
+  LamTm Identifier a a
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
-instance Treeable a => Treeable (PiTm a) where
-  refTree _ = "piTm"
+instance Treeable a => Treeable (LamTm a) where
+  refTree _ = "lamTm"
   defineTree _ =
     let identRef = refTree (Proxy :: Proxy Identifier)
         nestRef = refTree (Proxy :: Proxy a)
-     in BranchDef (BranchFixed [LeafDef (LeafKeyword "pi"), RefDef identRef, RefDef nestRef, RefDef nestRef])
+     in BranchDef (BranchFixed [LeafDef (LeafKeyword "lambda"), RefDef identRef, RefDef nestRef, RefDef nestRef])
   depsTree _ = [TreeProof (Proxy :: Proxy Identifier), TreeProof (Proxy :: Proxy a)]
   parseTree _ t =
     case t of
-      Branch [Leaf "pi", i, l, r] ->
-        PiTm <$> parseTree (Proxy :: Proxy Identifier) i <*> parseTree (Proxy :: Proxy a) l <*>
+      Branch [Leaf "lambda", i, l, r] ->
+        LamTm <$> parseTree (Proxy :: Proxy Identifier) i <*> parseTree (Proxy :: Proxy a) l <*>
         parseTree (Proxy :: Proxy a) r
       _ -> empty
-  renderTree (PiTm i l r) = Branch [Leaf "pi", renderTree i, renderTree l, renderTree r]
+  renderTree (LamTm i l r) = Branch [Leaf "lambda", renderTree i, renderTree l, renderTree r]
 
 data PiTy a =
   PiTy Identifier a a
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
 instance Treeable a => Treeable (PiTy a) where
   refTree _ = "piTy"
@@ -120,8 +136,6 @@ instance Treeable a => Treeable (PiTy a) where
         parseTree (Proxy :: Proxy a) r
       _ -> empty
   renderTree (PiTy i l r) = Branch [Leaf "Pi", renderTree i, renderTree l, renderTree r]
-
--- data SigmaExp a = SigmaExp a a deriving (Generic, Eq, Show)
 -- data SigmaTy a = SigmaTy a a deriving (Generic, Eq, Show)
 -- data ReflExp a = ReflExp a deriving (Generic, Eq, Show)
 -- data EqTy a = EqTy a a a deriving (Generic, Eq, Show)
