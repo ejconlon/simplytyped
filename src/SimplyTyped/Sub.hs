@@ -7,6 +7,7 @@ module SimplyTyped.Sub where
 import Control.Monad (ap)
 import Control.Monad.Except (Except, MonadError(..), runExcept)
 import Control.Monad.Trans (MonadTrans(..))
+import Control.Newtype.Generics (Newtype)
 import Data.Bifoldable (Bifoldable(..))
 import Data.Bifunctor (Bifunctor(..))
 import Data.Bitraversable (Bitraversable(..))
@@ -20,12 +21,9 @@ import GHC.Generics (Generic)
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
--- Sub
 data SubError
   = ApplyError Int Int
   | UnboundError Int
-  | FunctorMatchError
-  | BinderMatchError
   deriving (Generic, Eq, Show)
 
 class ThrowSub m where
@@ -44,55 +42,65 @@ runSub :: Sub a -> Either SubError a
 runSub = runExcept . unSub
 
 -- UnderBinder
-data UnderBinder n e =
-  UnderBinder
-    { ubArity :: Int
-    , ubInfo :: n
-    , ubBody :: e
-    }
-  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
+-- data UnderBinder n e =
+--   UnderBinder
+--     { ubArity :: Int
+--     , ubInfo :: n
+--     , ubBody :: e
+--     }
+--   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
--- UnderScope
-data UnderScope n f e a
-  = ScopeB Int
-  | ScopeF a
-  | ScopeA (UnderBinder n e)
-  | ScopeE (f e)
+data BoundScope = BoundScope Int
   deriving (Generic, Eq, Show)
 
+data FreeScope a = FreeScope a
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
+
+data BinderScope n e = BinderScope Int n e
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
+
+data EmbedScope f e = EmbedScope (f e)
+  deriving (Generic, Eq, Show, Functor)
+
+data UnderScope n f e a
+  = UnderBoundScope BoundScope
+  | UnderFreeScope (FreeScope a)
+  | UnderBinderScope (BinderScope n e)
+  | UnderEmbedScope (EmbedScope f e)
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
+
 instance Functor f => Bifunctor (UnderScope n f) where
-  bimap _ _ (ScopeB b) = ScopeB b
-  bimap _ g (ScopeF a) = ScopeF (g a)
-  bimap f _ (ScopeA (UnderBinder i x e)) = ScopeA (UnderBinder i x (f e))
-  bimap f _ (ScopeE fe) = ScopeE (f <$> fe)
+  bimap _ _ (UnderBoundScope (BoundScope b)) = UnderBoundScope (BoundScope b)
+  bimap _ g (UnderFreeScope (FreeScope a)) = UnderFreeScope (FreeScope (g a))
+  bimap f _ (UnderBinderScope (BinderScope i x e)) = UnderBinderScope (BinderScope i x (f e))
+  bimap f _ (UnderEmbedScope (EmbedScope fe)) = UnderEmbedScope (EmbedScope (f <$> fe))
 
 instance Foldable f => Bifoldable (UnderScope n f) where
-  bifoldr _ _ z (ScopeB _) = z
-  bifoldr _ g z (ScopeF a) = g a z
-  bifoldr f _ z (ScopeA (UnderBinder _ _ e)) = f e z
-  bifoldr f _ z (ScopeE fe) = foldr f z fe
+  bifoldr _ _ z (UnderBoundScope _) = z
+  bifoldr _ g z (UnderFreeScope (FreeScope a)) = g a z
+  bifoldr f _ z (UnderBinderScope (BinderScope _ _ e)) = f e z
+  bifoldr f _ z (UnderEmbedScope (EmbedScope fe)) = foldr f z fe
 
 instance Traversable f => Bitraversable (UnderScope n f) where
-  bitraverse _ _ (ScopeB b) = pure (ScopeB b)
-  bitraverse _ g (ScopeF a) = ScopeF <$> g a
-  bitraverse f _ (ScopeA (UnderBinder i x e)) = ScopeA . UnderBinder i x <$> f e
-  bitraverse f _ (ScopeE fe) = ScopeE <$> traverse f fe
+  bitraverse _ _ (UnderBoundScope (BoundScope b)) = pure (UnderBoundScope (BoundScope b))
+  bitraverse _ g (UnderFreeScope (FreeScope a)) = UnderFreeScope . FreeScope <$> g a
+  bitraverse f _ (UnderBinderScope (BinderScope i x e)) = UnderBinderScope . BinderScope i x <$> f e
+  bitraverse f _ (UnderEmbedScope (EmbedScope fe)) = UnderEmbedScope . EmbedScope <$> traverse f fe
 
--- Scope
 newtype Scope n f a =
   Scope
     { unScope :: UnderScope n f (Scope n f a) a
     }
   deriving (Generic)
 
+instance Newtype (Scope n f a)
+
 type BottomUp n f g a = f (Scope n g a) -> g (Scope n g a)
 
 instance (Eq (f (Scope n f a)), Eq n, Eq a) => Eq (Scope n f a) where
   Scope u == Scope v = u == v
 
-instance (Show (f (Scope n f a)), Show n, Show a) => Show (Scope n f a)
-    -- TODO show info
-                      where
+instance (Show (f (Scope n f a)), Show n, Show a) => Show (Scope n f a) where
   showsPrec d (Scope u) = showsPrec d u
 
 instance Functor f => Functor (Scope n f) where
@@ -136,31 +144,31 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
             i <- parseNat ti
             x <- parseTree (Proxy :: Proxy n) tx
             e <- parseTree p te
-            pure (Scope (ScopeA (UnderBinder i x e)))
+            pure (Scope (UnderBinderScope (BinderScope i x e)))
           _ -> parseFail
       parseEmbed =
         case t of
           Branch [Leaf "embed", te] -> do
             e <- parseTree (Proxy :: Proxy (f (Scope n f a))) te
-            pure (Scope (ScopeE e))
+            pure (Scope (UnderEmbedScope (EmbedScope e)))
           _ -> parseFail
   renderTree (Scope us) =
     case us of
-      ScopeB b -> Branch [Leaf "bound", Leaf (showAtom b)]
-      ScopeF a -> Branch [Leaf "free", Leaf (showAtom a)]
-      ScopeA (UnderBinder i x e) -> Branch [Leaf "binder", Leaf (showAtom i), renderTree x, renderTree e]
-      ScopeE fe -> Branch [Leaf "embed", renderTree fe]
+      UnderBoundScope (BoundScope b) -> Branch [Leaf "bound", Leaf (showAtom b)]
+      UnderFreeScope (FreeScope a) -> Branch [Leaf "free", Leaf (showAtom a)]
+      UnderBinderScope (BinderScope i x e) -> Branch [Leaf "binder", Leaf (showAtom i), renderTree x, renderTree e]
+      UnderEmbedScope (EmbedScope fe) -> Branch [Leaf "embed", renderTree fe]
 
 subScopeShift :: Functor f => Int -> Int -> Scope n f a -> Scope n f a
 subScopeShift c d s@(Scope us) =
   case us of
-    ScopeB b ->
+    UnderBoundScope (BoundScope b) ->
       if b < c
         then s
-        else Scope (ScopeB (b + d))
-    ScopeF _ -> s
-    ScopeA (UnderBinder i x e) -> Scope (ScopeA (UnderBinder i x (subScopeShift (c + i) d e)))
-    ScopeE fe -> Scope (ScopeE (subScopeShift c d <$> fe))
+        else Scope (UnderBoundScope (BoundScope (b + d)))
+    UnderFreeScope _ -> s
+    UnderBinderScope (BinderScope i x e) -> Scope (UnderBinderScope (BinderScope i x (subScopeShift (c + i) d e)))
+    UnderEmbedScope fe -> Scope (UnderEmbedScope (subScopeShift c d <$> fe))
 
 scopeShift :: Functor f => Int -> Scope n f a -> Scope n f a
 scopeShift = subScopeShift 0
@@ -168,21 +176,21 @@ scopeShift = subScopeShift 0
 scopeBind :: Functor f => Int -> Scope n f a -> (a -> Scope n f b) -> Scope n f b
 scopeBind n (Scope us) f =
   case us of
-    ScopeB b -> Scope (ScopeB b)
-    ScopeF a -> scopeShift n (f a)
-    ScopeA (UnderBinder i x e) -> Scope (ScopeA (UnderBinder i x (scopeBind (n + i) e f)))
-    ScopeE fe -> Scope (ScopeE ((\e -> scopeBind n e f) <$> fe))
+    UnderBoundScope (BoundScope b) -> Scope (UnderBoundScope (BoundScope b))
+    UnderFreeScope (FreeScope a) -> scopeShift n (f a)
+    UnderBinderScope (BinderScope i x e) -> Scope (UnderBinderScope (BinderScope i x (scopeBind (n + i) e f)))
+    UnderEmbedScope (EmbedScope fe) -> Scope (UnderEmbedScope (EmbedScope ((\e -> scopeBind n e f) <$> fe)))
 
 scopeBindOpt :: Functor f => Int -> Scope n f a -> (a -> Maybe (Scope n f a)) -> Scope n f a
 scopeBindOpt n s@(Scope us) f =
   case us of
-    ScopeB _ -> s
-    ScopeF a ->
+    UnderBoundScope _ -> s
+    UnderFreeScope (FreeScope a) ->
       case f a of
         Nothing -> s
         Just s' -> scopeShift n s'
-    ScopeA (UnderBinder i x e) -> Scope (ScopeA (UnderBinder i x (scopeBindOpt (n + i) e f)))
-    ScopeE fe -> Scope (ScopeE ((\e -> scopeBindOpt n e f) <$> fe))
+    UnderBinderScope (BinderScope i x e) -> Scope (UnderBinderScope (BinderScope i x (scopeBindOpt (n + i) e f)))
+    UnderEmbedScope (EmbedScope fe) -> Scope (UnderEmbedScope (EmbedScope ((\e -> scopeBindOpt n e f) <$> fe)))
 
 instance Functor f => Monad (Scope n f) where
   return = freeVarScope
@@ -192,19 +200,19 @@ instance MonadTrans (Scope n) where
   lift = liftScope
 
 boundVarScope :: Int -> Scope n f a
-boundVarScope = Scope . ScopeB
+boundVarScope = Scope . UnderBoundScope . BoundScope
 
 freeVarScope :: a -> Scope n f a
-freeVarScope = Scope . ScopeF
+freeVarScope = Scope . UnderFreeScope . FreeScope
 
-wrapScope :: f (Scope n f a) -> Scope n f a
-wrapScope = Scope . ScopeE
+embedScope :: f (Scope n f a) -> Scope n f a
+embedScope = Scope . UnderEmbedScope . EmbedScope
 
 liftScope :: Functor f => f a -> Scope n f a
-liftScope = wrapScope . (freeVarScope <$>)
+liftScope = embedScope . (freeVarScope <$>)
 
 binderScope :: Binder n f a -> Scope n f a
-binderScope = Scope . ScopeA . unBinder
+binderScope = Scope . UnderBinderScope . unBinder
 
 scopeFreeVars :: (Foldable f, Ord a) => Scope n f a -> Set a
 scopeFreeVars = Set.fromList . toList
@@ -217,7 +225,7 @@ class (Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) =>
   type ScopedIdentifier h :: *
   boundVarScoped :: Int -> h
   freeVarScoped :: ScopedIdentifier h -> h
-  wrapScoped :: ScopedFunctor h h -> h
+  embedScoped :: ScopedFunctor h h -> h
   abstractScoped :: ScopedInfo h -> Seq (ScopedIdentifier h) -> h -> h
   instantiateScoped :: Seq h -> h -> h
 
@@ -227,33 +235,22 @@ instance (Functor f, Eq a) => Scoped (Scope n f a) where
   type ScopedIdentifier (Scope n f a) = a
   boundVarScoped = boundVarScope
   freeVarScoped = freeVarScope
-  wrapScoped = wrapScope
+  embedScoped = embedScope
   abstractScoped n is b = binderScope (abstract n is b)
   instantiateScoped = instantiate
 
--- TODO PRISMS!!!
-matchFunctor :: Scope n f a -> Maybe (f (Scope n f a))
-matchFunctor (Scope (ScopeE fe)) = pure fe
-matchFunctor _ = Nothing
-
-forceFunctor :: (ThrowSub m, Applicative m) => Scope n f a -> m (f (Scope n f a))
-forceFunctor s =
-  case matchFunctor s of
-    Just x -> pure x
-    Nothing -> throwSub FunctorMatchError
-
-transformScope :: Functor f => BottomUp n f g a -> Scope n f a -> Scope n g a
-transformScope t (Scope us) =
-  case us of
-    ScopeB b -> Scope (ScopeB b)
-    ScopeF a -> Scope (ScopeF a)
-    ScopeA e -> Scope (ScopeA (unBinder (transformBinder t (Binder e))))
-    ScopeE fe -> Scope (ScopeE (t (transformScope t <$> fe)))
+-- transformScope :: Functor f => BottomUp n f g a -> Scope n f a -> Scope n g a
+-- transformScope t (Scope us) =
+--   case us of
+--     ScopeB b -> Scope (ScopeB b)
+--     ScopeF a -> Scope (ScopeF a)
+--     ScopeA e -> Scope (ScopeA (unBinder (transformBinder t (Binder e))))
+--     ScopeE fe -> Scope (ScopeE (t (transformScope t <$> fe)))
 
 -- Binder
 newtype Binder n f a =
   Binder
-    { unBinder :: UnderBinder n (Scope n f a)
+    { unBinder :: BinderScope n (Scope n f a)
     }
   deriving (Generic, Functor, Foldable, Traversable)
 
@@ -263,46 +260,38 @@ instance (Eq (f (Scope n f a)), Eq n, Eq a) => Eq (Binder n f a) where
 instance (Show (f (Scope n f a)), Show n, Show a) => Show (Binder n f a) where
   showsPrec d (Binder u) = showsPrec d u
 
-matchBinder :: Scope n f a -> Maybe (Binder n f a)
-matchBinder (Scope (ScopeA ub)) = pure (Binder ub)
-matchBinder _ = Nothing
-
-forceBinder :: (ThrowSub m, Applicative m) => Scope n f a -> m (Binder n f a)
-forceBinder s =
-  case matchBinder s of
-    Just x -> pure x
-    Nothing -> throwSub BinderMatchError
-
 binderArity :: Binder n f a -> Int
-binderArity = ubArity . unBinder
+binderArity (Binder (BinderScope i _ _)) = i
 
 binderInfo :: Binder n f a -> n
-binderInfo = ubInfo . unBinder
+binderInfo (Binder (BinderScope _ n _)) = n
 
 binderBody :: Binder n f a -> Scope n f a
-binderBody = ubBody . unBinder
+binderBody (Binder (BinderScope _ _ a)) = a
 
 binderFreeVars :: (Foldable f, Ord a) => Binder n f a -> Set a
 binderFreeVars = scopeFreeVars . binderBody
 
 -- binderMapInfo :: Functor f => (n -> o) -> Binder n f a -> Binder o f a
 -- binderMapInfo f (Binder (UnderBinder i x b)) = Binder (UnderBinder i (f x) (scopeMapInfo f b))
+
 -- binderTraverseInfo :: (Traversable f, Applicative m) => (n -> m o) -> Binder n f a -> m (Binder o f a)
 -- binderTraverseInfo f (Binder (UnderBinder i x b)) = (\y c -> Binder (UnderBinder i y c)) <$> f x <*> scopeTraverseInfo f b
-transformBinder :: Functor f => BottomUp n f g a -> Binder n f a -> Binder n g a
-transformBinder t (Binder (UnderBinder i x b)) = Binder (UnderBinder i x (transformScope t b))
+
+-- transformBinder :: Functor f => BottomUp n f g a -> Binder n f a -> Binder n g a
+-- transformBinder t (Binder (UnderBinder i x b)) = Binder (UnderBinder i x (transformScope t b))
 
 -- Abstraction and instantiation
 subAbstract :: (Functor f, Eq a) => Int -> n -> Seq a -> Scope n f a -> Binder n f a
-subAbstract n x ks s = Binder (UnderBinder n x (scopeBindOpt 0 s ((boundVarScope <$>) . flip Seq.elemIndexL ks)))
+subAbstract n x ks s = Binder (BinderScope n x (scopeBindOpt 0 s ((boundVarScope <$>) . flip Seq.elemIndexL ks)))
 
 subInstantiate :: Functor f => Int -> Seq (Scope n f a) -> Scope n f a -> Scope n f a
 subInstantiate n vs s@(Scope us) =
   case us of
-    ScopeB b -> fromMaybe s (vs Seq.!? (b - n))
-    ScopeF _ -> s
-    ScopeA (UnderBinder i x e) -> Scope (ScopeA (UnderBinder i x (subInstantiate (n + i) (scopeShift i <$> vs) e)))
-    ScopeE fe -> Scope (ScopeE (subInstantiate n vs <$> fe))
+    UnderBoundScope (BoundScope b) -> fromMaybe s (vs Seq.!? (b - n))
+    UnderFreeScope _ -> s
+    UnderBinderScope (BinderScope i x e) -> Scope (UnderBinderScope (BinderScope i x (subInstantiate (n + i) (scopeShift i <$> vs) e)))
+    UnderEmbedScope (EmbedScope fe) -> Scope (UnderEmbedScope (EmbedScope (subInstantiate n vs <$> fe)))
 
 abstract :: (Functor f, Eq a) => n -> Seq a -> Scope n f a -> Binder n f a
 abstract x ks =
@@ -320,7 +309,7 @@ rawApply vs i e =
         else throwSub (ApplyError len i)
 
 apply :: (ThrowSub m, Applicative m, Functor f) => Seq (Scope n f a) -> Binder n f a -> m (Scope n f a)
-apply vs (Binder (UnderBinder i _ e)) = rawApply vs i e
+apply vs (Binder (BinderScope i _ e)) = rawApply vs i e
 
 abstract1 :: (Functor f, Eq a) => n -> a -> Scope n f a -> Binder n f a
 abstract1 n k = abstract n (Seq.singleton k)
@@ -331,31 +320,32 @@ instantiate1 v = instantiate (Seq.singleton v)
 apply1 :: (ThrowSub m, Applicative m, Functor f) => Scope n f a -> Binder n f a -> m (Scope n f a)
 apply1 v = apply (Seq.singleton v)
 
--- ScopeFold
-data ScopeFold n f a r =
-  ScopeFold
-    { sfBound :: Int -> r
-    , sfFree :: a -> r
-    , sfBinder :: Binder n f a -> r
-    , sfFunctor :: f (Scope n f a) -> r
-    }
-  deriving (Generic, Functor)
+-- data ScopeFold n f a r =
+--   ScopeFold
+--     { sfBound :: Int -> r
+--     , sfFree :: a -> r
+--     , sfBinder :: Binder n f a -> r
+--     , sfFunctor :: f (Scope n f a) -> r
+--     }
+--   deriving (Generic, Functor)
 
 -- contramapFold :: (x -> y) -> ScopeFold n f a r -> ScopeFold x n f a r
 -- contramapFold f (ScopeFold bound free binder functor) = undefined
-transformFold :: Functor f => BottomUp n f g a -> ScopeFold n g a r -> ScopeFold n f a r
-transformFold t (ScopeFold bound free binder functor) =
-  ScopeFold bound free (binder . transformBinder t) (functor . t . (transformScope t <$>))
+
+-- transformFold :: Functor f => BottomUp n f g a -> ScopeFold n g a r -> ScopeFold n f a r
+-- transformFold t (ScopeFold bound free binder functor) =
+--   ScopeFold bound free (binder . transformBinder t) (functor . t . (transformScope t <$>))
 
 -- boundFold :: ThrowSub m => (a -> m r) -> (Binder n f a -> m r) -> (f (Scope n f a) -> m r) -> ScopeFold n f a (m r)
 -- boundFold = ScopeFold (const (throwSub . UnboundError))
-foldScope :: ScopeFold n f a r -> Scope n f a -> r
-foldScope (ScopeFold bound free binder functor) (Scope us) =
-  case us of
-    ScopeB b -> bound b
-    ScopeF a -> free a
-    ScopeA ub -> binder (Binder ub)
-    ScopeE fe -> functor fe
+
+-- foldScope :: ScopeFold n f a r -> Scope n f a -> r
+-- foldScope (ScopeFold bound free binder functor) (Scope us) =
+--   case us of
+--     ScopeB b -> bound b
+--     ScopeF a -> free a
+--     ScopeA ub -> binder (Binder ub)
+--     ScopeE fe -> functor fe
 
 -- Name
 data Name n a =

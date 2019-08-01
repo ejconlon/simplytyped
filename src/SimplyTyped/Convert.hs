@@ -14,16 +14,16 @@ instance Convert VarTm where
   convert (VarTm i) = freeVarScoped i
 
 instance Convert UnitTm where
-  convert = wrapScoped . ExpUnitTm
+  convert = embedScoped . ExpUnitTm
 
 instance Convert UnitTy where
-  convert = wrapScoped . ExpUnitTy
+  convert = embedScoped . ExpUnitTy
 
 instance Convert a => Convert (ProdTm a) where
-  convert (ProdTm x y) = wrapScoped (ExpProdTm (ProdTm (convert x) (convert y)))
+  convert (ProdTm x y) = embedScoped (ExpProdTm (ProdTm (convert x) (convert y)))
 
 instance Convert a => Convert (ProdTy a) where
-  convert (ProdTy x y) = wrapScoped (ExpProdTy (ProdTy (convert x) (convert y)))
+  convert (ProdTy x y) = embedScoped (ExpProdTy (ProdTy (convert x) (convert y)))
 
 instance Convert a => Convert (LamTm a) where
   convert (LamTm i x y) =

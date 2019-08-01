@@ -55,20 +55,20 @@ test_sub =
           scopeFreeVars svar2 @=? Set.singleton 'e'
       testAbstract =
         testCase "abstract" $ do
-          svar @?= (Scope (ScopeF 'x') :: BareScope)
-          sbound @?= (Scope (ScopeB 0) :: BareScope)
-          sfree @?= (Scope (ScopeA (UnderBinder 1 (Name 'y' ()) (Scope (ScopeF 'x')))) :: BareScope)
+          svar @?= (Scope (UnderFreeScope (FreeScope 'x')) :: BareScope)
+          sbound @?= (Scope (UnderBoundScope (BoundScope 0)) :: BareScope)
+          sfree @?= (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderFreeScope (FreeScope 'x'))))) :: BareScope)
           sfree2 @?=
             (Scope
-               (ScopeA (UnderBinder 1 (Name 'z' ()) (Scope (ScopeA (UnderBinder 1 (Name 'y' ()) (Scope (ScopeF 'x'))))))) :: BareScope)
-          sid @?= (Scope (ScopeA (UnderBinder 1 (Name 'x' ()) (Scope (ScopeB 0)))) :: BareScope)
-          swonky @?= (Scope (ScopeA (UnderBinder 1 (Name 'x' ()) (Scope (ScopeB 1)))) :: BareScope)
+               (UnderBinderScope (BinderScope 1 (Name 'z' ()) (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderFreeScope (FreeScope 'x')))))))) :: BareScope)
+          sid @?= (Scope (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBoundScope (BoundScope 0))))) :: BareScope)
+          swonky @?= (Scope (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBoundScope (BoundScope 1))))) :: BareScope)
           sconst @?=
             (Scope
-               (ScopeA (UnderBinder 1 (Name 'x' ()) (Scope (ScopeA (UnderBinder 1 (Name 'y' ()) (Scope (ScopeB 1))))))) :: BareScope)
+               (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderBoundScope (BoundScope 1)))))))) :: BareScope)
           sflip @?=
             (Scope
-               (ScopeA (UnderBinder 1 (Name 'x' ()) (Scope (ScopeA (UnderBinder 1 (Name 'y' ()) (Scope (ScopeB 0))))))) :: BareScope)
+               (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderBoundScope (BoundScope 0)))))))) :: BareScope)
       testInstantiate =
         testCase "instantiate" $ do
           instantiate1 svar2 svar @?= svar

@@ -105,6 +105,6 @@ instance Scoped ExpScope where
 
   boundVarScoped = ExpScope . boundVarScoped
   freeVarScoped = ExpScope . freeVarScoped
-  wrapScoped = ExpScope . wrapScoped . fmap unExpScope
+  embedScoped = ExpScope . embedScoped . fmap unExpScope
   abstractScoped n is = ExpScope . abstractScoped n is . unExpScope
   instantiateScoped vs = ExpScope . instantiateScoped (fmap unExpScope vs) . unExpScope
