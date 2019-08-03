@@ -4,11 +4,9 @@ module SimplyTyped.Main where
 
 import qualified Data.Map.Strict as Map
 import SimplyTyped.Back
-import SimplyTyped.Cli
+import SimplyTyped.Climb
 import SimplyTyped.Convert
-import SimplyTyped.Exceptions
 import SimplyTyped.Front
-import SimplyTyped.NiceRepl
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 

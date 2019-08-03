@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module SimplyTyped.Cli where
+module SimplyTyped.Climb.Cli where
 
 import Control.Monad.Catch (MonadCatch(..), MonadThrow(..))
 import Control.Monad.IO.Class (MonadIO(..))
@@ -10,10 +10,11 @@ import Control.Monad.State.Strict (MonadState(..))
 import Control.Monad.Trans (lift)
 import Data.Functor (($>))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import qualified Data.Text as T
+import Data.Text (Text)
+import qualified Data.Text as Text
 import GHC.Generics (Generic)
-import SimplyTyped.Exceptions
-import SimplyTyped.Prelude
+import Prelude
+import SimplyTyped.Climb.Exceptions
 import qualified System.Console.Haskeline as H
 import qualified System.Console.Haskeline.MonadException as HE
 import Text.Pretty.Simple (pPrint)
@@ -38,16 +39,16 @@ instance MonadCatch (Cli s) where
   catch act f = Cli (H.catch (unCli act) (unCli . f))
 
 getInputLine :: Text -> Cli s (Maybe Text)
-getInputLine prompt = Cli (fmap (fmap T.pack) (H.getInputLine (T.unpack prompt)))
+getInputLine prompt = Cli (fmap (fmap Text.pack) (H.getInputLine (Text.unpack prompt)))
 
 outputStr :: Text -> Cli s ()
-outputStr = Cli . H.outputStr . T.unpack
+outputStr = Cli . H.outputStr . Text.unpack
 
 outputParts :: [Text] -> Cli s ()
 outputParts = foldr ((>>) . outputStr) (pure ())
 
 outputStrLn :: Text -> Cli s ()
-outputStrLn = Cli . H.outputStrLn . T.unpack
+outputStrLn = Cli . H.outputStrLn . Text.unpack
 
 outputNewline :: Cli s ()
 outputNewline = liftIO (putStrLn "")
@@ -97,7 +98,7 @@ repl prompt command = loop
       case minput of
         Nothing -> pure ()
         Just input
-          | T.null input -> loop
+          | Text.null input -> loop
           | otherwise -> do
             directive <- H.handleInterrupt (outputNewline $> ReplContinue) (command input)
             case directive of

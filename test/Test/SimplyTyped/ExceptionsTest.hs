@@ -1,7 +1,7 @@
 module Test.SimplyTyped.ExceptionsTest where
 
 import Control.Exception (toException)
-import SimplyTyped.Exceptions
+import SimplyTyped.Climb.Exceptions
 import SimplyTyped.Prelude
 import Test.SimplyTyped.Assertions
 import Test.Tasty

@@ -1,10 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module SimplyTyped.NiceRepl where
+module SimplyTyped.Climb.NiceRepl where
 
 import Control.Concurrent (threadDelay)
 import Control.Exception (Exception)
 import Control.Monad (forever, unless)
+import Control.Monad.Catch (throwM)
 import Control.Monad.Fix (fix)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Strict (get, put)
@@ -12,13 +13,14 @@ import Data.Foldable (for_)
 import Data.Functor (($>))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Proxy (Proxy(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import SimplyTyped.Cli
-import SimplyTyped.Exceptions
-import SimplyTyped.Prelude
+import Prelude
+import SimplyTyped.Climb.Cli
+import SimplyTyped.Climb.Exceptions
 
 data ReplExc
   = ExpectedNoInputError

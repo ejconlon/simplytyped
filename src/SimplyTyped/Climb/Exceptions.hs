@@ -1,9 +1,12 @@
-module SimplyTyped.Exceptions where
+module SimplyTyped.Climb.Exceptions where
 
-import Control.Exception (toException)
+import Control.Exception (Exception(..), SomeException(..))
+import Control.Monad.Catch (MonadCatch, catch, throwM)
+import Data.Foldable (asum)
 import Data.Maybe (fromMaybe, isJust)
-import Data.Typeable (cast)
-import SimplyTyped.Prelude
+import Data.Proxy (Proxy(..))
+import Data.Typeable (Typeable, cast)
+import Prelude
 
 data TyProof where
   TyProof :: Typeable y => y -> TyProof

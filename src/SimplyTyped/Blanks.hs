@@ -1,4 +1,6 @@
-module SimplyTyped.Blanks (module Blanks) where
+module SimplyTyped.Blanks
+  ( module Blanks
+  ) where
 
 import SimplyTyped.Blanks.Fold as Blanks
 import SimplyTyped.Blanks.Name as Blanks
