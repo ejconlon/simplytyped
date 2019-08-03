@@ -1,15 +1,17 @@
 module SimplyTyped.Lenses
-  ( makeLenses
+  ( makeFieldLenses
+  , makeLenses
   , makePrisms
   ) where
 
 import Control.Lens ((.~))
-import Control.Lens.TH (DefName(TopName), lensField, lensRules, makeLensesWith, makePrisms)
+import Control.Lens.TH (DefName(TopName), lensField, lensRules, makeLenses, makeLensesWith, makePrisms)
 import Language.Haskell.TH (DecsQ, Name, mkName, nameBase)
 import SimplyTyped.Prelude
 
-makeLenses :: Name -> DecsQ
-makeLenses =
+-- TODO eh just scrap for the default?
+makeFieldLenses :: Name -> DecsQ
+makeFieldLenses =
   makeLensesWith $
   lensRules &
   lensField .~

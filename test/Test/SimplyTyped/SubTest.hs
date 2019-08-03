@@ -16,24 +16,24 @@ absBound :: Char -> BareScope -> BareBinder
 absBound a = abstract1 (Name a ()) a
 
 absScope :: Char -> BareScope -> BareScope
-absScope a = binderScope . absBound a
+absScope a = reviewBinderScoped . absBound a
 
 test_sub :: TestTree
 test_sub =
   let svar = pure 'x' :: BareScope
-      sbound = boundVarScope 0 :: BareScope
+      sbound = reviewBoundScoped 0 :: BareScope
       bfree = absBound 'y' (pure 'x') :: BareBinder
-      sfree = binderScope bfree
+      sfree = reviewBinderScoped bfree
       bfree2 = absBound 'z' (absScope 'y' (pure 'x')) :: BareBinder
-      sfree2 = binderScope bfree2
+      sfree2 = reviewBinderScoped bfree2
       bid = absBound 'x' (pure 'x') :: BareBinder
-      sid = binderScope bid
-      bwonky = absBound 'x' (boundVarScope 0) :: BareBinder
-      swonky = binderScope bwonky
+      sid = reviewBinderScoped bid
+      bwonky = absBound 'x' (reviewBoundScoped 0) :: BareBinder
+      swonky = reviewBinderScoped bwonky
       bconst = absBound 'x' (absScope 'y' (pure 'x')) :: BareBinder
-      sconst = binderScope bconst
+      sconst = reviewBinderScoped bconst
       bflip = absBound 'x' (absScope 'y' (pure 'y')) :: BareBinder
-      sflip = binderScope bflip
+      sflip = reviewBinderScoped bflip
       svar2 = pure 'e' :: BareScope
       swonky2 = absScope 'x' svar2 :: BareScope
       testEq =

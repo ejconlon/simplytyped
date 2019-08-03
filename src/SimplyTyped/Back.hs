@@ -6,6 +6,7 @@
 
 module SimplyTyped.Back where
 
+import Control.Lens (Iso', iso)
 import Control.Newtype.Generics (Newtype)
 import SimplyTyped.Deriving.Enum
 import SimplyTyped.Deriving.Sum
@@ -88,9 +89,14 @@ instance Treeable a => SumWrapper (Exp a) where
     , Inj (Proxy :: Proxy (ProdTy a)) _ExpProdTy
     ]
 
-newtype ExpScope = ExpScope { unExpScope :: Scope (BindInfo ExpScope) Exp Identifier }
+type UnderExpScope = Scope (BindInfo ExpScope) Exp Identifier
+
+newtype ExpScope = ExpScope { unExpScope :: UnderExpScope }
   deriving (Generic, Typeable, Eq, Show)
   deriving (Treeable) via TreeWrapperTreeable ExpScope
+
+_UnderExpScope :: Iso' ExpScope UnderExpScope
+_UnderExpScope = iso unExpScope ExpScope
 
 instance Newtype ExpScope
 
@@ -103,8 +109,4 @@ instance Scoped ExpScope where
   type ScopedFunctor ExpScope = Exp
   type ScopedIdentifier ExpScope = Identifier
 
-  boundVarScoped = ExpScope . boundVarScoped
-  freeVarScoped = ExpScope . freeVarScoped
-  embedScoped = ExpScope . embedScoped . fmap unExpScope
-  abstractScoped n is = ExpScope . abstractScoped n is . unExpScope
-  instantiateScoped vs = ExpScope . instantiateScoped (fmap unExpScope vs) . unExpScope
+  scoped = _UnderExpScope

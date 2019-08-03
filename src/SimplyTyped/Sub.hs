@@ -4,6 +4,7 @@
 
 module SimplyTyped.Sub where
 
+import Control.Lens (Iso', Prism', from, iso, over, prism, review, simple, view, withPrism)
 import Control.Monad (ap)
 import Control.Monad.Except (Except, MonadError(..), runExcept)
 import Control.Monad.Trans (MonadTrans(..))
@@ -18,6 +19,7 @@ import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import SimplyTyped.Lenses
 import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
@@ -41,25 +43,20 @@ instance ThrowSub Sub where
 runSub :: Sub a -> Either SubError a
 runSub = runExcept . unSub
 
--- UnderBinder
--- data UnderBinder n e =
---   UnderBinder
---     { ubArity :: Int
---     , ubInfo :: n
---     , ubBody :: e
---     }
---   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
-
-data BoundScope = BoundScope Int
+data BoundScope = BoundScope { boundScopeIndex :: Int }
   deriving (Generic, Eq, Show)
 
-data FreeScope a = FreeScope a
+data FreeScope a = FreeScope { freeScopeVar :: a }
   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
-data BinderScope n e = BinderScope Int n e
+data BinderScope n e = BinderScope
+  { binderScopeArity :: Int
+  , binderScopeInfo :: n
+  , binderScopeBody :: e
+  }
   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
-data EmbedScope f e = EmbedScope (f e)
+data EmbedScope f e = EmbedScope { embedScopeBody :: f e }
   deriving (Generic, Eq, Show, Functor)
 
 data UnderScope n f e a
@@ -68,6 +65,8 @@ data UnderScope n f e a
   | UnderBinderScope (BinderScope n e)
   | UnderEmbedScope (EmbedScope f e)
   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
+
+$(makePrisms ''UnderScope)
 
 instance Functor f => Bifunctor (UnderScope n f) where
   bimap _ _ (UnderBoundScope (BoundScope b)) = UnderBoundScope (BoundScope b)
@@ -93,6 +92,11 @@ newtype Scope n f a =
     }
   deriving (Generic)
 
+type Binder n f a = BinderScope n (Scope n f a)
+
+_UnderScope :: Iso' (Scope n f a) (UnderScope n f (Scope n f a) a)
+_UnderScope = iso unScope Scope
+
 instance Newtype (Scope n f a)
 
 type BottomUp n f g a = f (Scope n g a) -> g (Scope n g a)
@@ -113,7 +117,7 @@ instance Traversable f => Traversable (Scope n f) where
   traverse f (Scope us) = Scope <$> bitraverse (traverse f) f us
 
 instance Functor f => Applicative (Scope n f) where
-  pure = freeVarScope
+  pure = Scope . UnderFreeScope . FreeScope
   (<*>) = ap
 
 instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (Scope n f a) where
@@ -132,11 +136,11 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
     where
       parseBound =
         case t of
-          Branch [Leaf "bound", Leaf tb] -> boundVarScope <$> parseNat tb
+          Branch [Leaf "bound", Leaf tb] -> Scope . UnderBoundScope . BoundScope <$> parseNat tb
           _ -> parseFail
       parseFree =
         case t of
-          Branch [Leaf "free", Leaf ta] -> freeVarScope <$> parseRead ta
+          Branch [Leaf "free", Leaf ta] -> Scope . UnderFreeScope . FreeScope <$> parseRead ta
           _ -> parseFail
       parseBinder =
         case t of
@@ -193,51 +197,85 @@ scopeBindOpt n s@(Scope us) f =
     UnderEmbedScope (EmbedScope fe) -> Scope (UnderEmbedScope (EmbedScope ((\e -> scopeBindOpt n e f) <$> fe)))
 
 instance Functor f => Monad (Scope n f) where
-  return = freeVarScope
+  return = pure
   (>>=) = scopeBind 0
 
 instance MonadTrans (Scope n) where
-  lift = liftScope
-
-boundVarScope :: Int -> Scope n f a
-boundVarScope = Scope . UnderBoundScope . BoundScope
-
-freeVarScope :: a -> Scope n f a
-freeVarScope = Scope . UnderFreeScope . FreeScope
-
-embedScope :: f (Scope n f a) -> Scope n f a
-embedScope = Scope . UnderEmbedScope . EmbedScope
-
-liftScope :: Functor f => f a -> Scope n f a
-liftScope = embedScope . (freeVarScope <$>)
-
-binderScope :: Binder n f a -> Scope n f a
-binderScope = Scope . UnderBinderScope . unBinder
+  lift = Scope . UnderEmbedScope . EmbedScope . fmap pure
 
 scopeFreeVars :: (Foldable f, Ord a) => Scope n f a -> Set a
 scopeFreeVars = Set.fromList . toList
 
-class (Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) =>
-      Scoped h
-  where
+class Scoped h where
   type ScopedInfo h :: *
   type ScopedFunctor h :: * -> *
   type ScopedIdentifier h :: *
-  boundVarScoped :: Int -> h
-  freeVarScoped :: ScopedIdentifier h -> h
-  embedScoped :: ScopedFunctor h h -> h
-  abstractScoped :: ScopedInfo h -> Seq (ScopedIdentifier h) -> h -> h
-  instantiateScoped :: Seq h -> h -> h
 
-instance (Functor f, Eq a) => Scoped (Scope n f a) where
+  scoped :: Iso' h (ScopedType h)
+
+type ScopedType h = Scope (ScopedInfo h) (ScopedFunctor h) (ScopedIdentifier h)
+
+boundScoped :: Scoped h => Prism' h BoundScope
+boundScoped = scoped . _UnderScope . _UnderBoundScope
+
+reviewBoundScoped :: Scoped h => Int -> h
+reviewBoundScoped = review boundScoped . BoundScope
+
+freeScoped :: Scoped h => Prism' h (FreeScope (ScopedIdentifier h))
+freeScoped = scoped . _UnderScope . _UnderFreeScope
+
+reviewFreeScoped :: Scoped h => ScopedIdentifier h -> h
+reviewFreeScoped = review freeScoped . FreeScope
+
+binderScoped' :: Scoped h => Prism' h (BinderScope (ScopedInfo h) (ScopedType h))
+binderScoped' = scoped . _UnderScope . _UnderBinderScope
+
+-- Jesus...
+underMap :: Functor f => Prism' a (f b) -> Iso' b c -> Prism' a (f c)
+underMap v w = withPrism v $ \m n ->
+  let p fc =
+        let fb = fmap (review w) fc
+        in m fb
+      q a =
+        let b = n a
+        in fmap (fmap (view w)) b
+  in prism p q
+
+binderScoped :: Scoped h => Prism' h (BinderScope (ScopedInfo h) h)
+binderScoped = underMap binderScoped' (from scoped)
+
+reviewBinderScoped :: Scoped h => BinderScope (ScopedInfo h) h -> h
+reviewBinderScoped = review binderScoped
+
+embedScoped' :: Scoped h => Prism' h (EmbedScope (ScopedFunctor h) (ScopedType h))
+embedScoped' = scoped . _UnderScope . _UnderEmbedScope
+
+embedScoped :: (Scoped h, Functor (ScopedFunctor h)) => Prism' h (EmbedScope (ScopedFunctor h) h)
+embedScoped = underMap embedScoped' (from scoped)
+
+wrapScoped' :: Scoped h => ScopedFunctor h (ScopedType h) -> h
+wrapScoped' = review scoped . Scope . UnderEmbedScope . EmbedScope
+
+wrapScoped :: (Scoped h, Functor (ScopedFunctor h)) => ScopedFunctor h h -> h
+wrapScoped = wrapScoped' . fmap (view scoped)
+
+liftScoped :: (Scoped h, Functor (ScopedFunctor h)) => ScopedFunctor h (ScopedIdentifier h) -> h
+liftScoped fa =
+  let fs = Scope . UnderFreeScope . FreeScope <$> fa
+  in wrapScoped' fs
+
+abstractScoped :: (Scoped h, Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) => ScopedInfo h -> Seq (ScopedIdentifier h) -> h -> h
+abstractScoped si sas = over scoped (Scope . UnderBinderScope . abstract si sas)
+
+instantiateScoped :: (Scoped h, Functor (ScopedFunctor h)) => Seq h -> h -> h
+instantiateScoped vs = over scoped (instantiate (fmap (review (from scoped)) vs))
+
+instance Scoped (Scope n f a) where
   type ScopedInfo (Scope n f a) = n
   type ScopedFunctor (Scope n f a) = f
   type ScopedIdentifier (Scope n f a) = a
-  boundVarScoped = boundVarScope
-  freeVarScoped = freeVarScope
-  embedScoped = embedScope
-  abstractScoped n is b = binderScope (abstract n is b)
-  instantiateScoped = instantiate
+
+  scoped = simple
 
 -- transformScope :: Functor f => BottomUp n f g a -> Scope n f a -> Scope n g a
 -- transformScope t (Scope us) =
@@ -247,43 +285,9 @@ instance (Functor f, Eq a) => Scoped (Scope n f a) where
 --     ScopeA e -> Scope (ScopeA (unBinder (transformBinder t (Binder e))))
 --     ScopeE fe -> Scope (ScopeE (t (transformScope t <$> fe)))
 
--- Binder
-newtype Binder n f a =
-  Binder
-    { unBinder :: BinderScope n (Scope n f a)
-    }
-  deriving (Generic, Functor, Foldable, Traversable)
-
-instance (Eq (f (Scope n f a)), Eq n, Eq a) => Eq (Binder n f a) where
-  Binder u == Binder v = u == v
-
-instance (Show (f (Scope n f a)), Show n, Show a) => Show (Binder n f a) where
-  showsPrec d (Binder u) = showsPrec d u
-
-binderArity :: Binder n f a -> Int
-binderArity (Binder (BinderScope i _ _)) = i
-
-binderInfo :: Binder n f a -> n
-binderInfo (Binder (BinderScope _ n _)) = n
-
-binderBody :: Binder n f a -> Scope n f a
-binderBody (Binder (BinderScope _ _ a)) = a
-
-binderFreeVars :: (Foldable f, Ord a) => Binder n f a -> Set a
-binderFreeVars = scopeFreeVars . binderBody
-
--- binderMapInfo :: Functor f => (n -> o) -> Binder n f a -> Binder o f a
--- binderMapInfo f (Binder (UnderBinder i x b)) = Binder (UnderBinder i (f x) (scopeMapInfo f b))
-
--- binderTraverseInfo :: (Traversable f, Applicative m) => (n -> m o) -> Binder n f a -> m (Binder o f a)
--- binderTraverseInfo f (Binder (UnderBinder i x b)) = (\y c -> Binder (UnderBinder i y c)) <$> f x <*> scopeTraverseInfo f b
-
--- transformBinder :: Functor f => BottomUp n f g a -> Binder n f a -> Binder n g a
--- transformBinder t (Binder (UnderBinder i x b)) = Binder (UnderBinder i x (transformScope t b))
-
 -- Abstraction and instantiation
-subAbstract :: (Functor f, Eq a) => Int -> n -> Seq a -> Scope n f a -> Binder n f a
-subAbstract n x ks s = Binder (BinderScope n x (scopeBindOpt 0 s ((boundVarScope <$>) . flip Seq.elemIndexL ks)))
+subAbstract :: (Functor f, Eq a) => Int -> n -> Seq a -> Scope n f a -> BinderScope n (Scope n f a)
+subAbstract n x ks s = BinderScope n x (scopeBindOpt 0 s ((Scope . UnderBoundScope . BoundScope <$>) . flip Seq.elemIndexL ks))
 
 subInstantiate :: Functor f => Int -> Seq (Scope n f a) -> Scope n f a -> Scope n f a
 subInstantiate n vs s@(Scope us) =
@@ -309,7 +313,7 @@ rawApply vs i e =
         else throwSub (ApplyError len i)
 
 apply :: (ThrowSub m, Applicative m, Functor f) => Seq (Scope n f a) -> Binder n f a -> m (Scope n f a)
-apply vs (Binder (BinderScope i _ e)) = rawApply vs i e
+apply vs (BinderScope i _ e) = rawApply vs i e
 
 abstract1 :: (Functor f, Eq a) => n -> a -> Scope n f a -> Binder n f a
 abstract1 n k = abstract n (Seq.singleton k)

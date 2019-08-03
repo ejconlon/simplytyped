@@ -1,5 +1,6 @@
 module SimplyTyped.Convert where
 
+import Control.Lens (review)
 import qualified Data.Sequence as Seq
 import SimplyTyped.Back
 import SimplyTyped.Front
@@ -11,19 +12,19 @@ class Convert a where
   convert :: a -> ExpScope
 
 instance Convert VarTm where
-  convert (VarTm i) = freeVarScoped i
+  convert (VarTm i) = review freeScoped (FreeScope i)
 
 instance Convert UnitTm where
-  convert = embedScoped . ExpUnitTm
+  convert = liftScoped . ExpUnitTm
 
 instance Convert UnitTy where
-  convert = embedScoped . ExpUnitTy
+  convert = liftScoped . ExpUnitTy
 
 instance Convert a => Convert (ProdTm a) where
-  convert (ProdTm x y) = embedScoped (ExpProdTm (ProdTm (convert x) (convert y)))
+  convert (ProdTm x y) = wrapScoped (ExpProdTm (ProdTm (convert x) (convert y)))
 
 instance Convert a => Convert (ProdTy a) where
-  convert (ProdTy x y) = embedScoped (ExpProdTy (ProdTy (convert x) (convert y)))
+  convert (ProdTy x y) = wrapScoped (ExpProdTy (ProdTy (convert x) (convert y)))
 
 instance Convert a => Convert (LamTm a) where
   convert (LamTm i x y) =
