@@ -2,10 +2,7 @@ module Test.SimplyTyped.BlanksTest where
 
 import Control.Monad.Identity (Identity(..))
 import Data.Set as Set
-import SimplyTyped.Blanks.Name
-import SimplyTyped.Blanks.Scope
-import SimplyTyped.Blanks.Scoped
-import SimplyTyped.Blanks.Sub
+import SimplyTyped.Blanks
 import SimplyTyped.Prelude
 import Test.SimplyTyped.Assertions ((@/=))
 import Test.Tasty
