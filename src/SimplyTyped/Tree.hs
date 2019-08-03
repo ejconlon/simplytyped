@@ -1,12 +1,15 @@
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module SimplyTyped.Tree where
 
 import Data.Foldable (toList)
 import Data.Map (Map)
 import qualified Data.Map as Map
-
--- import qualified Data.Map.Merge.Lazy as Merge
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
+import SimplyTyped.Blanks.Scope
 import SimplyTyped.Prelude
 import qualified Text.Megaparsec as MP
 import qualified Text.Megaparsec.Char as MPC
@@ -111,28 +114,6 @@ showTree (Branch ts) = "(" <> Text.intercalate " " (showTree <$> toList ts) <> "
 showTreeable :: Treeable a => a -> Text
 showTreeable = showTree . renderTree
 
--- mergeDepTrees :: Map TreeIdent TreeDef -> Map TreeIdent TreeDef -> Map TreeIdent TreeDef
--- mergeDepTrees = merge where
---   merge = Merge.merge Merge.preserveMissing Merge.preserveMissing (Merge.zipWithMatched match)
---   match k x y =
---     if x == y
---       then x
---       else error ("Dep mismatch " <> show k <> ": " <> show x <> " vs " <> show y)
--- crawlDepTree :: TreeProof -> Map TreeIdent TreeDef -> Map TreeIdent TreeDef
--- crawlDepTree (TreeProof p) m =
---   let n = refTree p
---   in if Map.member n m
---     then m
---     else mergeDepTrees m (selfDepsTree p)
--- crawlAllDepTrees :: Seq TreeProof -> Map TreeIdent TreeDef
--- crawlAllDepTrees = foldr crawlDepTree Map.empty
-data Anno =
-  Anno
-    { annoStart :: MP.SourcePos
-    , annoEnd :: MP.SourcePos
-    }
-  deriving (Generic, Eq, Show)
-
 type TextParser = MP.Parsec Void Text
 
 spaceConsumer :: TextParser ()
@@ -194,3 +175,46 @@ easyReadTreeable _ t =
     Empty -> throwM NoParseError
     a :<| Empty -> pure a
     as -> throwM (AmbiguityError as)
+
+instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (Scope n f a) where
+  refTree _ = "scope"
+  defineTree _ =
+    let refN = refTree (Proxy :: Proxy n)
+        refE = refTree (Proxy :: Proxy (f (Scope n f a)))
+      in ChoiceDef
+          [ BranchDef (BranchFixed [LeafDef (LeafKeyword "bound"), LeafDef LeafNat])
+          , BranchDef (BranchFixed [LeafDef (LeafKeyword "free"), LeafDef LeafIdent])
+          , BranchDef (BranchFixed [LeafDef (LeafKeyword "binder"), LeafDef LeafNat, RefDef refN, RefDef "scope"])
+          , BranchDef (BranchFixed [LeafDef (LeafKeyword "embed"), RefDef refE])
+          ]
+  depsTree _ = [TreeProof (Proxy :: Proxy n), TreeProof (Proxy :: Proxy (f (Scope n f a)))]
+  parseTree p t = parseBound <|> parseFree <|> parseBinder <|> parseEmbed
+    where
+      parseBound =
+        case t of
+          Branch [Leaf "bound", Leaf tb] -> Scope . UnderBoundScope . BoundScope <$> parseNat tb
+          _ -> parseFail
+      parseFree =
+        case t of
+          Branch [Leaf "free", Leaf ta] -> Scope . UnderFreeScope . FreeScope <$> parseRead ta
+          _ -> parseFail
+      parseBinder =
+        case t of
+          Branch [Leaf "binder", Leaf ti, tx, te] -> do
+            i <- parseNat ti
+            x <- parseTree (Proxy :: Proxy n) tx
+            e <- parseTree p te
+            pure (Scope (UnderBinderScope (BinderScope i x e)))
+          _ -> parseFail
+      parseEmbed =
+        case t of
+          Branch [Leaf "embed", te] -> do
+            e <- parseTree (Proxy :: Proxy (f (Scope n f a))) te
+            pure (Scope (UnderEmbedScope (EmbedScope e)))
+          _ -> parseFail
+  renderTree (Scope us) =
+    case us of
+      UnderBoundScope (BoundScope b) -> Branch [Leaf "bound", Leaf (showAtom b)]
+      UnderFreeScope (FreeScope a) -> Branch [Leaf "free", Leaf (showAtom a)]
+      UnderBinderScope (BinderScope i x e) -> Branch [Leaf "binder", Leaf (showAtom i), renderTree x, renderTree e]
+      UnderEmbedScope (EmbedScope fe) -> Branch [Leaf "embed", renderTree fe]

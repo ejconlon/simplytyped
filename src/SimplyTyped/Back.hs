@@ -11,10 +11,11 @@ import Control.Newtype.Generics (Newtype)
 import SimplyTyped.Deriving.Enum
 import SimplyTyped.Deriving.Sum
 import SimplyTyped.Deriving.Wrapper
+import SimplyTyped.Blanks.Scope
+import SimplyTyped.Blanks.Scoped
 import SimplyTyped.Lenses
 import SimplyTyped.Parts
 import SimplyTyped.Prelude
-import SimplyTyped.Sub
 import SimplyTyped.Tree
 
 data BindCon =

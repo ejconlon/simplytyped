@@ -1,9 +1,12 @@
-module Test.SimplyTyped.SubTest where
+module Test.SimplyTyped.BlanksTest where
 
 import Control.Monad.Identity (Identity(..))
 import Data.Set as Set
 import SimplyTyped.Prelude
-import SimplyTyped.Sub
+import SimplyTyped.Blanks.Name
+import SimplyTyped.Blanks.Scope
+import SimplyTyped.Blanks.Scoped
+import SimplyTyped.Blanks.Sub
 import Test.SimplyTyped.Assertions ((@/=))
 import Test.Tasty
 import Test.Tasty.HUnit
