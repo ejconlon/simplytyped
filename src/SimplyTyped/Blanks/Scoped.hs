@@ -10,7 +10,6 @@ class Scoped h where
   type ScopedInfo h :: *
   type ScopedFunctor h :: * -> *
   type ScopedIdentifier h :: *
-
   scoped :: Iso' h (ScopedType h)
 
 type ScopedType h = Scope (ScopedInfo h) (ScopedFunctor h) (ScopedIdentifier h)
@@ -32,14 +31,15 @@ binderScoped' = scoped . _UnderScope . _UnderBinderScope
 
 -- Jesus...
 underMap :: Functor f => Prism' a (f b) -> Iso' b c -> Prism' a (f c)
-underMap v w = withPrism v $ \m n ->
-  let p fc =
-        let fb = fmap (review w) fc
-        in m fb
-      q a =
-        let b = n a
-        in fmap (fmap (view w)) b
-  in prism p q
+underMap v w =
+  withPrism v $ \m n ->
+    let p fc =
+          let fb = fmap (review w) fc
+           in m fb
+        q a =
+          let b = n a
+           in fmap (fmap (view w)) b
+     in prism p q
 
 binderScoped :: Scoped h => Prism' h (BinderScope (ScopedInfo h) h)
 binderScoped = underMap binderScoped' (from scoped)
@@ -62,12 +62,18 @@ wrapScoped = wrapScoped' . fmap (view scoped)
 liftScoped :: (Scoped h, Functor (ScopedFunctor h)) => ScopedFunctor h (ScopedIdentifier h) -> h
 liftScoped fa =
   let fs = Scope . UnderFreeScope . FreeScope <$> fa
-  in wrapScoped' fs
+   in wrapScoped' fs
 
-abstractScoped :: (Scoped h, Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) => ScopedInfo h -> Seq (ScopedIdentifier h) -> h -> h
+abstractScoped ::
+     (Scoped h, Functor (ScopedFunctor h), Eq (ScopedIdentifier h))
+  => ScopedInfo h
+  -> Seq (ScopedIdentifier h)
+  -> h
+  -> h
 abstractScoped si sas = over scoped (Scope . UnderBinderScope . abstract si sas)
 
-abstract1Scoped :: (Scoped h, Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) => ScopedInfo h -> ScopedIdentifier h -> h -> h
+abstract1Scoped ::
+     (Scoped h, Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) => ScopedInfo h -> ScopedIdentifier h -> h -> h
 abstract1Scoped si sa = abstractScoped si (Seq.singleton sa)
 
 instantiateScoped :: (Scoped h, Functor (ScopedFunctor h)) => Seq h -> h -> h
@@ -78,13 +84,10 @@ instantiate1Scoped v = instantiateScoped (Seq.singleton v)
 
 -- applyScoped :: (ThrowSub m, Applicative m, Scoped h, Functor (ScopedFunctor h)) => Seq h -> h -> m h
 -- applyScoped vs = undefined -- over scoped (apply (fmap (review (from scoped)) vs))
-
 -- apply1Scoped :: (ThrowSub m, Applicative m, Scoped h, Functor (ScopedFunctor h)) => h -> h -> m h
 -- apply1Scoped v = applyScoped (Seq.singleton v)
-
 instance Scoped (Scope n f a) where
   type ScopedInfo (Scope n f a) = n
   type ScopedFunctor (Scope n f a) = f
   type ScopedIdentifier (Scope n f a) = a
-
   scoped = simple

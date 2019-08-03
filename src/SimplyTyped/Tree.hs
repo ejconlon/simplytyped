@@ -181,7 +181,7 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
   defineTree _ =
     let refN = refTree (Proxy :: Proxy n)
         refE = refTree (Proxy :: Proxy (f (Scope n f a)))
-      in ChoiceDef
+     in ChoiceDef
           [ BranchDef (BranchFixed [LeafDef (LeafKeyword "bound"), LeafDef LeafNat])
           , BranchDef (BranchFixed [LeafDef (LeafKeyword "free"), LeafDef LeafIdent])
           , BranchDef (BranchFixed [LeafDef (LeafKeyword "binder"), LeafDef LeafNat, RefDef refN, RefDef "scope"])

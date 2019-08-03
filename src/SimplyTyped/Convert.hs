@@ -1,7 +1,7 @@
 module SimplyTyped.Convert where
 
-import SimplyTyped.Blanks.Scoped
 import SimplyTyped.Back
+import SimplyTyped.Blanks.Scoped
 import SimplyTyped.Front
 import SimplyTyped.Parts
 import SimplyTyped.Prelude
@@ -27,12 +27,12 @@ instance Convert a => Convert (ProdTy a) where
 instance Convert a => Convert (LamTm a) where
   convert (LamTm i x y) =
     let bi = BindInfo BindConLam i (convert x)
-    in abstract1Scoped bi i (convert y)
+     in abstract1Scoped bi i (convert y)
 
 instance Convert a => Convert (PiTy a) where
   convert (PiTy i x y) =
     let bi = BindInfo BindConPiTy i (convert x)
-    in abstract1Scoped bi i (convert y)
+     in abstract1Scoped bi i (convert y)
 
 instance Convert FrontFix where
   convert (FrontFix t) =

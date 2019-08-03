@@ -19,22 +19,32 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Prelude
-import SimplyTyped.Blanks.Sub (ThrowSub (..), SubError (..))
+import SimplyTyped.Blanks.Sub (SubError(..), ThrowSub(..))
 
-newtype BoundScope = BoundScope { unBoundScope :: Int }
+newtype BoundScope =
+  BoundScope
+    { unBoundScope :: Int
+    }
   deriving (Generic, Eq, Show)
 
-newtype FreeScope a = FreeScope { unFreeScope :: a }
+newtype FreeScope a =
+  FreeScope
+    { unFreeScope :: a
+    }
   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
-data BinderScope n e = BinderScope
-  { binderScopeArity :: Int
-  , binderScopeInfo :: n
-  , binderScopeBody :: e
-  }
+data BinderScope n e =
+  BinderScope
+    { binderScopeArity :: Int
+    , binderScopeInfo :: n
+    , binderScopeBody :: e
+    }
   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
-newtype EmbedScope f e = EmbedScope { unEmbedScope :: f e }
+newtype EmbedScope f e =
+  EmbedScope
+    { unEmbedScope :: f e
+    }
   deriving (Generic, Eq, Show, Functor)
 
 data UnderScope n f e a
@@ -151,14 +161,16 @@ transformScope t (Scope us) =
 
 -- Abstraction and instantiation
 subAbstract :: (Functor f, Eq a) => Int -> n -> Seq a -> Scope n f a -> BinderScope n (Scope n f a)
-subAbstract n x ks s = BinderScope n x (scopeBindOpt 0 s ((Scope . UnderBoundScope . BoundScope <$>) . flip Seq.elemIndexL ks))
+subAbstract n x ks s =
+  BinderScope n x (scopeBindOpt 0 s ((Scope . UnderBoundScope . BoundScope <$>) . flip Seq.elemIndexL ks))
 
 subInstantiate :: Functor f => Int -> Seq (Scope n f a) -> Scope n f a -> Scope n f a
 subInstantiate n vs s@(Scope us) =
   case us of
     UnderBoundScope (BoundScope b) -> fromMaybe s (vs Seq.!? (b - n))
     UnderFreeScope _ -> s
-    UnderBinderScope (BinderScope i x e) -> Scope (UnderBinderScope (BinderScope i x (subInstantiate (n + i) (scopeShift i <$> vs) e)))
+    UnderBinderScope (BinderScope i x e) ->
+      Scope (UnderBinderScope (BinderScope i x (subInstantiate (n + i) (scopeShift i <$> vs) e)))
     UnderEmbedScope (EmbedScope fe) -> Scope (UnderEmbedScope (EmbedScope (subInstantiate n vs <$> fe)))
 
 abstract :: (Functor f, Eq a) => n -> Seq a -> Scope n f a -> Binder n f a

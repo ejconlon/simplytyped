@@ -2,11 +2,11 @@ module Test.SimplyTyped.BlanksTest where
 
 import Control.Monad.Identity (Identity(..))
 import Data.Set as Set
-import SimplyTyped.Prelude
 import SimplyTyped.Blanks.Name
 import SimplyTyped.Blanks.Scope
 import SimplyTyped.Blanks.Scoped
 import SimplyTyped.Blanks.Sub
+import SimplyTyped.Prelude
 import Test.SimplyTyped.Assertions ((@/=))
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -60,18 +60,33 @@ test_sub =
         testCase "abstract" $ do
           svar @?= (Scope (UnderFreeScope (FreeScope 'x')) :: BareScope)
           sbound @?= (Scope (UnderBoundScope (BoundScope 0)) :: BareScope)
-          sfree @?= (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderFreeScope (FreeScope 'x'))))) :: BareScope)
+          sfree @?=
+            (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderFreeScope (FreeScope 'x'))))) :: BareScope)
           sfree2 @?=
             (Scope
-               (UnderBinderScope (BinderScope 1 (Name 'z' ()) (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderFreeScope (FreeScope 'x')))))))) :: BareScope)
-          sid @?= (Scope (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBoundScope (BoundScope 0))))) :: BareScope)
-          swonky @?= (Scope (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBoundScope (BoundScope 1))))) :: BareScope)
+               (UnderBinderScope
+                  (BinderScope
+                     1
+                     (Name 'z' ())
+                     (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderFreeScope (FreeScope 'x')))))))) :: BareScope)
+          sid @?=
+            (Scope (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBoundScope (BoundScope 0))))) :: BareScope)
+          swonky @?=
+            (Scope (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBoundScope (BoundScope 1))))) :: BareScope)
           sconst @?=
             (Scope
-               (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderBoundScope (BoundScope 1)))))))) :: BareScope)
+               (UnderBinderScope
+                  (BinderScope
+                     1
+                     (Name 'x' ())
+                     (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderBoundScope (BoundScope 1)))))))) :: BareScope)
           sflip @?=
             (Scope
-               (UnderBinderScope (BinderScope 1 (Name 'x' ()) (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderBoundScope (BoundScope 0)))))))) :: BareScope)
+               (UnderBinderScope
+                  (BinderScope
+                     1
+                     (Name 'x' ())
+                     (Scope (UnderBinderScope (BinderScope 1 (Name 'y' ()) (Scope (UnderBoundScope (BoundScope 0)))))))) :: BareScope)
       testInstantiate =
         testCase "instantiate" $ do
           instantiate1 svar2 svar @?= svar
