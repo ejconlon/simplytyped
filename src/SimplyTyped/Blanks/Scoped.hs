@@ -5,6 +5,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Prelude
 import SimplyTyped.Blanks.Scope
+import SimplyTyped.Blanks.Fold
 
 class Scoped h where
   type ScopedInfo h :: *
@@ -13,6 +14,7 @@ class Scoped h where
   scoped :: Iso' h (ScopedType h)
 
 type ScopedType h = Scope (ScopedInfo h) (ScopedFunctor h) (ScopedIdentifier h)
+type ScopedFold h r = ScopeFold (ScopedInfo h) (ScopedFunctor h) (ScopedIdentifier h) r
 
 boundScoped :: Scoped h => Prism' h BoundScope
 boundScoped = scoped . _UnderScope . _UnderBoundScope
@@ -76,11 +78,23 @@ abstract1Scoped ::
      (Scoped h, Functor (ScopedFunctor h), Eq (ScopedIdentifier h)) => ScopedInfo h -> ScopedIdentifier h -> h -> h
 abstract1Scoped si sa = abstractScoped si (Seq.singleton sa)
 
+unAbstractScoped :: (Scoped h, Functor (ScopedFunctor h)) => Seq (ScopedIdentifier h) -> h -> h
+unAbstractScoped sas = over scoped (unAbstract sas)
+
+unAbstract1Scoped :: (Scoped h, Functor (ScopedFunctor h)) => ScopedIdentifier h -> h -> h
+unAbstract1Scoped sa = over scoped (unAbstract1 sa)
+
 instantiateScoped :: (Scoped h, Functor (ScopedFunctor h)) => Seq h -> h -> h
 instantiateScoped vs = over scoped (instantiate (fmap (review (from scoped)) vs))
 
 instantiate1Scoped :: (Scoped h, Functor (ScopedFunctor h)) => h -> h -> h
 instantiate1Scoped v = instantiateScoped (Seq.singleton v)
+
+foldScoped :: Scoped h => ScopedFold h r -> h -> r
+foldScoped f = foldScope f . view scoped
+
+shiftScoped :: (Scoped h, Functor (ScopedFunctor h)) => Int -> h -> h
+shiftScoped i = over scoped (scopeShift i)
 
 -- applyScoped :: (ThrowSub m, Applicative m, Scoped h, Functor (ScopedFunctor h)) => Seq h -> h -> m h
 -- applyScoped vs = undefined -- over scoped (apply (fmap (review (from scoped)) vs))

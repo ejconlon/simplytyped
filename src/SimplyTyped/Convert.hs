@@ -12,6 +12,9 @@ class Convert a where
 instance Convert VarTm where
   convert (VarTm i) = reviewFreeScoped i
 
+instance Convert TyTy where
+  convert = liftScoped . ExpTyTy
+
 instance Convert UnitTm where
   convert = liftScoped . ExpUnitTm
 
@@ -37,6 +40,7 @@ instance Convert a => Convert (PiTy a) where
 instance Convert FrontFix where
   convert (FrontFix t) =
     case t of
+      FrontExpTyTy u -> convert u
       FrontExpVarTm u -> convert u
       FrontExpUnitTm u -> convert u
       FrontExpUnitTy u -> convert u

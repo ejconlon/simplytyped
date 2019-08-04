@@ -39,6 +39,20 @@ instance Treeable VarTm where
       _ -> empty
   renderTree (VarTm i) = Branch [Leaf "var", renderTree i]
 
+data TyTy =
+  TyTy
+  deriving (Generic, Eq, Show)
+
+instance Treeable TyTy where
+  refTree _ = "tyTy"
+  defineTree _ = LeafDef (LeafKeyword "Type")
+  depsTree _ = Seq.empty
+  parseTree _ t =
+    case t of
+      Leaf "Type" -> pure TyTy
+      _ -> empty
+  renderTree _ = Leaf "Type"
+
 data UnitTm =
   UnitTm
   deriving (Generic, Eq, Show)

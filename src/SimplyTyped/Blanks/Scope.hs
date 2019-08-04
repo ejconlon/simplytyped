@@ -178,6 +178,9 @@ abstract x ks =
   let n = Seq.length ks
    in subAbstract n x ks . scopeShift n
 
+unAbstract :: Functor f => Seq a -> Scope n f a -> Scope n f a
+unAbstract as = instantiate (Scope . UnderFreeScope . FreeScope <$> as)
+
 instantiate :: Functor f => Seq (Scope n f a) -> Scope n f a -> Scope n f a
 instantiate = subInstantiate 0
 
@@ -193,6 +196,9 @@ apply vs (BinderScope i _ e) = rawApply vs i e
 
 abstract1 :: (Functor f, Eq a) => n -> a -> Scope n f a -> Binder n f a
 abstract1 n k = abstract n (Seq.singleton k)
+
+unAbstract1 :: Functor f => a -> Scope n f a -> Scope n f a
+unAbstract1 a = unAbstract (Seq.singleton a)
 
 instantiate1 :: Functor f => Scope n f a -> Scope n f a -> Scope n f a
 instantiate1 v = instantiate (Seq.singleton v)

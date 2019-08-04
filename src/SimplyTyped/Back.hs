@@ -69,10 +69,12 @@ instance Treeable a => Treeable (BindInfo a) where
     Branch [renderTree x, renderTree i, renderTree y]
 
 data Exp a =
-      ExpUnitTm UnitTm
+      ExpTyTy TyTy
+    | ExpUnitTm UnitTm
     | ExpUnitTy UnitTy
     | ExpProdTm (ProdTm a)
     | ExpProdTy (ProdTy a)
+    -- | ExpSigmaTy (SigmaTy a)
     -- | ExpReflTm (ReflTm a)
     -- | ExpEqTy (EqTy a)
     deriving (Generic, Eq, Show, Functor, Foldable, Traversable)

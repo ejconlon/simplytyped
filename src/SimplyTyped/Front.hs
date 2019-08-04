@@ -12,7 +12,8 @@ import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
 data FrontExp a =
-      FrontExpVarTm VarTm
+      FrontExpTyTy TyTy
+    | FrontExpVarTm VarTm
     | FrontExpUnitTm UnitTm
     | FrontExpUnitTy UnitTy
     | FrontExpProdTm (ProdTm a)
@@ -31,7 +32,8 @@ deriving via (SumWrapperTreeable (FrontExp a)) instance Treeable a => Treeable (
 instance Treeable a => SumWrapper (FrontExp a) where
   sumRefTree _ = "frontExp"
   sumTreeInjs _ =
-    [ Inj (Proxy :: Proxy VarTm) _FrontExpVarTm
+    [ Inj (Proxy :: Proxy TyTy) _FrontExpTyTy
+    , Inj (Proxy :: Proxy VarTm) _FrontExpVarTm
     , Inj (Proxy :: Proxy UnitTm) _FrontExpUnitTm
     , Inj (Proxy :: Proxy UnitTy) _FrontExpUnitTy
     , Inj (Proxy :: Proxy (ProdTm a)) _FrontExpProdTm
