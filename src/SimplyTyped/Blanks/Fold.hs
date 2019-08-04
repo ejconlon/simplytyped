@@ -14,7 +14,12 @@ data ScopeFold n f a r =
     }
   deriving (Generic, Functor)
 
-boundFold :: ThrowSub m => (FreeScope a -> m r) -> (BinderScope n (Scope n f a) -> m r) -> (EmbedScope f (Scope n f a) -> m r) -> ScopeFold n f a (m r)
+boundFold ::
+     ThrowSub m
+  => (FreeScope a -> m r)
+  -> (BinderScope n (Scope n f a) -> m r)
+  -> (EmbedScope f (Scope n f a) -> m r)
+  -> ScopeFold n f a (m r)
 boundFold = ScopeFold (throwSub . UnboundError . unBoundScope)
 
 foldScope :: ScopeFold n f a r -> Scope n f a -> r

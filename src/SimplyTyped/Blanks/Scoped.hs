@@ -4,8 +4,8 @@ import Control.Lens (Iso', Prism', from, over, prism, review, simple, view, with
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Prelude
-import SimplyTyped.Blanks.Scope
 import SimplyTyped.Blanks.Fold
+import SimplyTyped.Blanks.Scope
 
 class Scoped h where
   type ScopedInfo h :: *
@@ -14,6 +14,7 @@ class Scoped h where
   scoped :: Iso' h (ScopedType h)
 
 type ScopedType h = Scope (ScopedInfo h) (ScopedFunctor h) (ScopedIdentifier h)
+
 type ScopedFold h r = ScopeFold (ScopedInfo h) (ScopedFunctor h) (ScopedIdentifier h) r
 
 boundScoped :: Scoped h => Prism' h BoundScope
