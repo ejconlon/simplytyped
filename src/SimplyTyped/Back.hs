@@ -19,7 +19,7 @@ import SimplyTyped.Prelude
 import SimplyTyped.Tree
 
 data BindCon =
-    BindConLam
+    BindConPi
   | BindConPiTy
   | BindConSigmaTy
   deriving (Generic, Eq, Show, Ord, Bounded, Enum)
@@ -29,12 +29,12 @@ instance EnumWrapper BindCon where
   enumRefTree _ = "bindCon"
   enumToValueKeyword v =
     case v of
-      BindConLam -> "lambda"
+      BindConPi -> "pi"
       BindConPiTy -> "Pi"
       BindConSigmaTy -> "Sigma"
   enumFromValueKeyword _ k =
     case k of
-      "lambda" -> Just BindConLam
+      "pi" -> Just BindConPi
       "Pi" -> Just BindConPiTy
       "Sigma" -> Just BindConSigmaTy
       _ -> Nothing

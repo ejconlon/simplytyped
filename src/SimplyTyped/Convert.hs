@@ -27,9 +27,9 @@ instance Convert a => Convert (ProdTm a) where
 instance Convert a => Convert (ProdTy a) where
   convert (ProdTy x y) = wrapScoped (ExpProdTy (ProdTy (convert x) (convert y)))
 
-instance Convert a => Convert (LamTm a) where
-  convert (LamTm i x y) =
-    let bi = BindInfo BindConLam i (convert x)
+instance Convert a => Convert (PiTm a) where
+  convert (PiTm i x y) =
+    let bi = BindInfo BindConPi i (convert x)
      in abstract1Scoped bi i (convert y)
 
 instance Convert a => Convert (PiTy a) where
@@ -46,5 +46,5 @@ instance Convert FrontFix where
       FrontExpUnitTy u -> convert u
       FrontExpProdTm u -> convert u
       FrontExpProdTy u -> convert u
-      FrontExpLamTm u -> convert u
+      FrontExpPiTm u -> convert u
       FrontExpPiTy u -> convert u

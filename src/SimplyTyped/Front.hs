@@ -18,7 +18,7 @@ data FrontExp a =
     | FrontExpUnitTy UnitTy
     | FrontExpProdTm (ProdTm a)
     | FrontExpProdTy (ProdTy a)
-    | FrontExpLamTm (LamTm a)
+    | FrontExpPiTm (PiTm a)
     | FrontExpPiTy (PiTy a)
     -- | FrontExpSigmaTy (SigmaTy a)
     -- | FrontExpReflTm (ReflTm a)
@@ -38,7 +38,7 @@ instance Treeable a => SumWrapper (FrontExp a) where
     , Inj (Proxy :: Proxy UnitTy) _FrontExpUnitTy
     , Inj (Proxy :: Proxy (ProdTm a)) _FrontExpProdTm
     , Inj (Proxy :: Proxy (ProdTy a)) _FrontExpProdTy
-    , Inj (Proxy :: Proxy (LamTm a)) _FrontExpLamTm
+    , Inj (Proxy :: Proxy (PiTm a)) _FrontExpPiTm
     , Inj (Proxy :: Proxy (PiTy a)) _FrontExpPiTy
     ]
 

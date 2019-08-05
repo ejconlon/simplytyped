@@ -113,24 +113,24 @@ instance Treeable a => Treeable (ProdTy a) where
       _ -> empty
   renderTree (ProdTy l r) = Branch [Leaf "Prod", renderTree l, renderTree r]
 
-data LamTm a =
-  LamTm Identifier a a
+data PiTm a =
+  PiTm Identifier a a
   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
-instance Treeable a => Treeable (LamTm a) where
-  refTree _ = "lamTm"
+instance Treeable a => Treeable (PiTm a) where
+  refTree _ = "piTm"
   defineTree _ =
     let identRef = refTree (Proxy :: Proxy Identifier)
         nestRef = refTree (Proxy :: Proxy a)
-     in BranchDef (BranchFixed [LeafDef (LeafKeyword "lambda"), RefDef identRef, RefDef nestRef, RefDef nestRef])
+     in BranchDef (BranchFixed [LeafDef (LeafKeyword "pi"), RefDef identRef, RefDef nestRef, RefDef nestRef])
   depsTree _ = [TreeProof (Proxy :: Proxy Identifier), TreeProof (Proxy :: Proxy a)]
   parseTree _ t =
     case t of
-      Branch [Leaf "lambda", i, l, r] ->
-        LamTm <$> parseTree (Proxy :: Proxy Identifier) i <*> parseTree (Proxy :: Proxy a) l <*>
+      Branch [Leaf "pi", i, l, r] ->
+        PiTm <$> parseTree (Proxy :: Proxy Identifier) i <*> parseTree (Proxy :: Proxy a) l <*>
         parseTree (Proxy :: Proxy a) r
       _ -> empty
-  renderTree (LamTm i l r) = Branch [Leaf "lambda", renderTree i, renderTree l, renderTree r]
+  renderTree (PiTm i l r) = Branch [Leaf "pi", renderTree i, renderTree l, renderTree r]
 
 data PiTy a =
   PiTy Identifier a a
