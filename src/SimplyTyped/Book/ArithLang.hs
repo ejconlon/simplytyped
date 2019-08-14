@@ -65,50 +65,52 @@ bigStep t =
     Just t' -> bigStep t'
     Nothing -> t
 
-data Kont = KontIf Term Term | KontPred | KontSucc | KontIsZero deriving (Eq, Show)
+data Kont = KontTop | KontIf Term Term Kont | KontPred Kont | KontSucc Kont | KontIsZero Kont deriving (Eq, Show)
 
-data Step = Value Term | Next Term | Stuck | Redex Term Kont deriving (Eq, Show)
+data Step = Apply Term Kont | Redex Term Kont deriving (Eq, Show)
 
-reducePred :: Term -> Step
-reducePred t =
-  case t of
-    TmZero -> Value TmZero
-    TmSucc t' -> Value t'
-    _ -> Stuck
-
-reduceIsZero :: Term -> Step
-reduceIsZero t =
-  case t of
-    TmZero -> Value TmTrue
-    TmSucc _ -> Value TmFalse
-    _ -> Stuck
-
-reduceKont :: Kont -> Term -> Step
+reduceKont :: Kont -> Term -> Maybe Step
 reduceKont k t1 =
   case k of
-    KontIf t2 t3 ->
+    KontTop -> Nothing
+    KontIf t2 t3 k' ->
       case t1 of
-        TmTrue -> Next t2
-        TmFalse -> Next t3
-        _ -> Stuck
-    KontSucc -> Value (TmSucc t1)
-    KontPred -> reducePred t1
-    KontIsZero -> reduceIsZero t1
+        TmTrue -> Just (Redex t2 k')
+        TmFalse -> Just (Redex t3 k')
+        _ -> Nothing
+    KontSucc k' -> Just (Apply (TmSucc t1) k')
+    KontPred k' ->
+      case t1 of
+        TmZero -> Just (Apply TmZero k')
+        TmSucc t1' -> Just (Apply t1' k')
+        _ -> Nothing
+    KontIsZero k' ->
+      case t1 of
+        TmZero -> Just (Apply TmTrue k')
+        TmSucc _ -> Just (Apply TmFalse k')
+        _ -> Nothing
 
-smallHoleStep :: Term -> Step
-smallHoleStep t =
+smallHoleStep :: Kont -> Term -> Step
+smallHoleStep k t =
   case t of
-    TmIf t1 t2 t3 -> Redex t1 (KontIf t2 t3)
-    TmSucc t1 -> Redex t1 KontSucc
-    TmPred t1 -> Redex t1 KontPred
-    TmIsZero t1 -> Redex t1 KontIsZero
-    _ -> Value t
+    TmIf t1 t2 t3 -> Redex t1 (KontIf t2 t3 k)
+    TmSucc t1 -> Redex t1 (KontSucc k)
+    TmPred t1 -> Redex t1 (KontPred k)
+    TmIsZero t1 -> Redex t1 (KontIsZero k)
+    _ -> Apply t k
+
+initStep :: Term -> Step
+initStep t = Redex t KontTop
+
+nextStep :: Step -> Maybe Step
+nextStep s =
+  case s of
+    Apply t k -> reduceKont k t
+    Redex t k -> Just (smallHoleStep k t)
 
 bigHoleStep :: Term -> Maybe Term
-bigHoleStep t = go (smallHoleStep t) where
+bigHoleStep t = go (initStep t) where
   go s =
     case s of
-      Value t' -> Just t'
-      Next t' -> bigHoleStep t'
-      Stuck -> Nothing
-      Redex t' k -> bigHoleStep t' >>= go . reduceKont k
+      Apply t' KontTop -> Just t'
+      _ -> nextStep s >>= go
