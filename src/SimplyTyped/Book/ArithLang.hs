@@ -78,7 +78,11 @@ reduceKont k t1 =
         TmTrue -> Just (Redex t2 k')
         TmFalse -> Just (Redex t3 k')
         _ -> Nothing
-    KontSucc k' -> Just (Apply (TmSucc t1) k')
+    KontSucc k' ->
+      case t1 of
+        TmZero -> Just (Apply (TmSucc t1) k')
+        TmSucc _ -> Just (Apply (TmSucc t1) k')
+        _ -> Nothing
     KontPred k' ->
       case t1 of
         TmZero -> Just (Apply TmZero k')
