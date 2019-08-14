@@ -64,7 +64,7 @@ instance Treeable a => Treeable (BindInfo a) where
         i <- parseTree (Proxy :: Proxy Identifier) ti
         y <- parseTree (Proxy :: Proxy a) ty
         pure (BindInfo x i y)
-      _ -> parseFail
+      _ -> empty
   renderTree (BindInfo x i y) =
     Branch [renderTree x, renderTree i, renderTree y]
 

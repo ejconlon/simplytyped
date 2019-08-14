@@ -25,6 +25,6 @@ instance (Enum a, Bounded a, EnumWrapper a) => Treeable (EnumWrapperTreeable a) 
   depsTree _ = Seq.empty
   parseTree _ t =
     case t of
-      Leaf n -> maybe parseFail (pure . EnumWrapperTreeable) (enumFromValueKeyword (Proxy :: Proxy a) n)
-      _ -> parseFail
+      Leaf n -> maybe empty (pure . EnumWrapperTreeable) (enumFromValueKeyword (Proxy :: Proxy a) n)
+      _ -> empty
   renderTree = Leaf . enumToValueKeyword . unEnumWrapperTreeable

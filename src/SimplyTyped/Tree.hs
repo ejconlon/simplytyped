@@ -22,14 +22,17 @@ newtype TreeParser a =
     }
   deriving (Functor, Applicative, Monad, Alternative)
 
-parseFail :: TreeParser a
-parseFail = TreeParser Seq.empty
+parseRead :: (Alternative m, Read a) => Atom -> m a
+parseRead (Atom t) = maybe empty pure (readMaybe (Text.unpack t))
 
-parseRead :: Read a => Atom -> TreeParser a
-parseRead (Atom t) = maybe parseFail pure (readMaybe (Text.unpack t))
-
-parseNat :: Atom -> TreeParser Int
+parseNat :: Alternative m => Atom -> m Int
 parseNat = parseRead
+
+parseLeaf :: Alternative m => (Atom -> m a) -> (Tree -> m a)
+parseLeaf f t =
+  case t of
+    Leaf a -> f a
+    _ -> empty
 
 showAtom :: Show a => a -> Atom
 showAtom = Atom . Text.pack . show
@@ -92,6 +95,7 @@ data BranchMatcher
   = BranchWild
   | BranchFixed (Seq TreeDef)
   | BranchRepeated TreeDef
+  | BranchTagged LeafMatcher BranchMatcher
   deriving (Generic, Eq, Show)
 
 data TreeDef
@@ -193,25 +197,25 @@ instance (Read a, Show a, Treeable n, Treeable (f (Scope n f a))) => Treeable (S
       parseBound =
         case t of
           Branch [Leaf "bound", Leaf tb] -> Scope . UnderBoundScope . BoundScope <$> parseNat tb
-          _ -> parseFail
+          _ -> empty
       parseFree =
         case t of
           Branch [Leaf "free", Leaf ta] -> Scope . UnderFreeScope . FreeScope <$> parseRead ta
-          _ -> parseFail
+          _ -> empty
       parseBinder =
         case t of
-          Branch [Leaf "binder", Leaf ti, tx, te] -> do
-            i <- parseNat ti
-            x <- parseTree (Proxy :: Proxy n) tx
-            e <- parseTree p te
-            pure (Scope (UnderBinderScope (BinderScope i x e)))
-          _ -> parseFail
+          Branch [Leaf "binder", Leaf ti, tx, te] ->
+            let mi = parseNat ti
+                mx = parseTree (Proxy :: Proxy n) tx
+                me = parseTree p te
+            in (\i x e -> Scope (UnderBinderScope (BinderScope i x e))) <$> mi <*> mx <*> me
+          _ -> empty
       parseEmbed =
         case t of
-          Branch [Leaf "embed", te] -> do
-            e <- parseTree (Proxy :: Proxy (f (Scope n f a))) te
-            pure (Scope (UnderEmbedScope (EmbedScope e)))
-          _ -> parseFail
+          Branch [Leaf "embed", te] ->
+            let me = parseTree (Proxy :: Proxy (f (Scope n f a))) te
+            in Scope . UnderEmbedScope . EmbedScope <$> me
+          _ -> empty
   renderTree (Scope us) =
     case us of
       UnderBoundScope (BoundScope b) -> Branch [Leaf "bound", Leaf (showAtom b)]
