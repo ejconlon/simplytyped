@@ -33,12 +33,17 @@ data ConPat b = ConPat (Maybe b) (Seq (Maybe b)) deriving (Generic, Show, Eq, Fu
 
 data ConVal a = ConVal ConName (Seq a) deriving (Generic, Show, Eq, Functor, Foldable, Traversable)
 
+data BindVal a = BindVal BindName (Seq Identifier) a deriving (Generic, Show, Eq, Functor, Foldable, Traversable)
+
 renderCon :: Treeable a => ConVal a -> Tree
 renderCon (ConVal (ConName n) s) =
   let ln = Leaf (Atom n)
   in case s of
     Empty -> ln
     _ -> Branch (ln :<| (renderTree <$> s))
+
+renderBind :: Treeable a => BindVal a -> Tree
+renderBind = undefined
 
 parseCon :: Treeable a => Proxy a -> Tree -> TreeParser (ConVal a)
 parseCon _ (Leaf (Atom n)) = pure (ConVal (ConName n) Empty)
@@ -47,12 +52,22 @@ parseCon p (Branch s) =
     Leaf (Atom n) :<| s' -> ConVal (ConName n) <$> traverse (parseTree p) s'
     _ -> empty
 
+parseBind :: Treeable a => Proxy a -> Tree -> TreeParser (BindVal a)
+parseBind = undefined
+
 instance Treeable a => Treeable (ConVal a) where
   refTree _ = "conVal"
   defineTree _ = ChoiceDef [LeafDef LeafIdent, BranchDef (BranchTagged LeafIdent BranchWild)]
   depsTree _ = [TreeProof (Proxy :: Proxy a)]
   parseTree _ = parseCon (Proxy :: Proxy a)
   renderTree = renderCon
+
+instance Treeable a => Treeable (BindVal a) where
+  refTree _ = "bindVal"
+  defineTree _ = ChoiceDef [LeafDef LeafIdent, BranchDef BranchWild, BranchDef BranchWild]
+  depsTree _ = [TreeProof (Proxy :: Proxy a)]
+  parseTree _ = parseBind (Proxy :: Proxy a)
+  renderTree = renderBind
 
 instance Treeable BindInfo where
   refTree _ = "bindInfo"
@@ -66,16 +81,18 @@ instance Treeable BindInfo where
 
 data Language = Language (Seq ConDef) (Seq BindDef) deriving (Generic, Eq, Show)
 
--- data LangFunc a
---   = LangCon (ConVal a)
---   | LangBind (BindVal a)
---   | LangPat (PatVal a)
---   deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
+-- Add `LangPat (PatVal a)` to support patterns
+data LangFunc a
+  = LangCon (ConVal a)
+  | LangBind (BindVal a)
+  deriving (Generic, Eq, Show, Functor, Foldable, Traversable)
 
+-- newtype LangScope = LangScope { unLangScope :: Scope BindInfo LangFunc Identifier } deriving (Generic)
 newtype LangScope = LangScope { unLangScope :: Scope BindInfo ConVal Identifier } deriving (Generic)
 
 instance Scoped LangScope where
   type ScopedInfo LangScope = BindInfo
+  -- type ScopedFunctor LangScope = LangFunc
   type ScopedFunctor LangScope = ConVal
   type ScopedIdentifier LangScope = Identifier
   scoped = iso unLangScope LangScope
